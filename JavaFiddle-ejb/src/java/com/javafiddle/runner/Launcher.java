@@ -3,7 +3,9 @@ package com.javafiddle.runner;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
+/**
+ * Interface for Compilation and Execution classes.
+ */
 public interface Launcher {
     void run();
 

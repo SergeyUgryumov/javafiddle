@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.javafiddle.runner;
 
 import com.javafiddle.pool.Task;
@@ -10,7 +6,11 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+/**
+ * The Killer class is responsible for time limitation for the programs. 
+ * Look at string where "kill" command is executed. It won't run on Windows!
+ * 
+ */
 public class Killer extends Thread implements Serializable {
     private Task task = null;
     private Integer pid = null;

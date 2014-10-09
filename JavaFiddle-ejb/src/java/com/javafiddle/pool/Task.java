@@ -6,7 +6,9 @@ import java.io.OutputStream;
 import java.io.Serializable;
 
 import java.util.Date;
-
+/**
+ * The Task class handles states of the processes used in the app.
+ */
 public class Task extends Thread implements Serializable {
 
     private String id = null;
