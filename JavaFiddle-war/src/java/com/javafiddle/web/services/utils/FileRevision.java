@@ -1,5 +1,8 @@
 package com.javafiddle.web.services.utils;
-
+/**
+ * Contains two fields: <i>timeStamp</i> and <i>value</i>. <br/>
+ * And all getters and setters for them.
+ */
 public class FileRevision {
     long timeStamp;
     String value;

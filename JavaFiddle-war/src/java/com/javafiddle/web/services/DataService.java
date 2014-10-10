@@ -29,6 +29,12 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+/**
+ * DataService class is responsible for saving and getting the project's 
+ * hierarchy to and from the disk.
+ * <br/>
+ * Strongly relies on <i>com.javafiddle.saving</i> and <i>com.javafiddle.revisions</i> packages!!!
+ */
 @Path("data")
 @RequestScoped
 public class DataService {
@@ -36,6 +42,10 @@ public class DataService {
     @Inject
     private ISessionData sd;
     
+    /**
+     * Returns the project with specified hash. "Project" is the tree of the 
+     * project including all files. 
+     */
     @POST
     @Path("changeproject")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -62,10 +72,14 @@ public class DataService {
             revisions.put(time, text);
             sd.getFiles().put(id, revisions);
         }
-        
         return Response.ok().build();
     }
     
+    /**
+     * Saves a revision to the disk and generates the hash of the revision. 
+     * @param request
+     * @return 
+     */
     @POST
     @Path("project")
     public Response saveProjectRevision (
@@ -85,6 +99,11 @@ public class DataService {
         return Response.ok(hash, MediaType.TEXT_PLAIN).build();
     }
     
+    /**
+     * Returns the hierarchy of the project basing on it's hash. 
+     * @param request
+     * @return 
+     */
     @GET
     @Path("hierarchy")
     @Produces(MediaType.APPLICATION_JSON)
@@ -101,7 +120,17 @@ public class DataService {
         Gson gson = new GsonBuilder().create();
         return Response.ok(gson.toJson(names), MediaType.APPLICATION_JSON).build();
     }
-            
+           
+    /**
+     * Returns wrapped into a Response object FileRevision object containing 
+     * link to the file with the specified ID.<br/>
+     * At least, I (RTur) understand it so.<br/>
+     * Separately handles such idStrings as "about_tab" and "shortcuts_tab" for 
+     * some reason.
+     * @param request
+     * @param idString
+     * @return 
+     */
     @GET
     @Path("file")
     @Produces(MediaType.APPLICATION_JSON)
@@ -140,7 +169,15 @@ public class DataService {
         
         return Response.ok(gson.toJson(fr), MediaType.APPLICATION_JSON).build();
     }
-    
+    //Finally I found a class that really uses Revisions class...
+    /**
+     * Adds current revision into the system.
+     * @param request
+     * @param idString
+     * @param timeStamp
+     * @param value
+     * @return 
+     */
     @POST
     @Path("file")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -166,7 +203,6 @@ public class DataService {
                 Revisions revisions = new Revisions(sd.getIdList(), sd.getFiles());
                 addResult = revisions.addFileRevision(id, timeStamp, value);
         }
-        
         return Response.status(addResult == 304 ? 200 : addResult).build();
     }
 }

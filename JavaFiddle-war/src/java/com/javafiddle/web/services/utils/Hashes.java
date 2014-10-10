@@ -11,6 +11,7 @@ public class Hashes implements Serializable {
     private String parentTreeHash = "";
     private String srcHash = "";
     
+    //и не поймешь с ходу, чем отличается BranchHash от TreeHash... Ну я не понял... Р.Туркин
     public String getBranchHash() {
         return branchHash;
     }
