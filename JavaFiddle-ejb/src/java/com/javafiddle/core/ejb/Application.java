@@ -8,7 +8,7 @@ import javax.ejb.Singleton;
 import javax.ejb.Startup;
 
 /**
- *
+ * Currently it just creates a "guest" user.
  * @author danon
  */
 @Startup @Singleton

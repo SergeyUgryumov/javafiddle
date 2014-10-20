@@ -12,6 +12,10 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 
+/**
+ * Handles operations with database Project.
+ * It includes revisions operations.
+ */
 @Stateless
 public class ProjectManager implements ProjectManagerLocal {
 
