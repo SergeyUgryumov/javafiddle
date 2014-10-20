@@ -28,7 +28,10 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
+/**
+ * The TreeService class is responsible for handling operations around the project 
+ * tree. It includes operations with files, packages, correctness checks, etc. 
+ */
 @Path("tree")
 @RequestScoped
 public class TreeService {

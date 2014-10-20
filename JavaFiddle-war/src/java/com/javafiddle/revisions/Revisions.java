@@ -6,6 +6,10 @@ import com.javafiddle.web.tree.TreeFile;
 import java.util.Date;
 import java.util.TreeMap;
 
+/**
+ * Revisions class is supposed to be a version control system. <br/>
+ * Will be replaced with git. 
+ */
 public class Revisions {
     IdList idList;
     TreeMap<Integer, TreeMap<Long, String>> files;
@@ -18,7 +22,13 @@ public class Revisions {
     public void addFileRevision(TreeFile file, IdList idList) {
         addFileRevision(file.getId(), 0, new ClassTemplate(file, idList).getValue());
     }
-    
+    /**
+     * 
+     * @param id
+     * @param timeStamp
+     * @param value
+     * @return 
+     */
     public int addFileRevision(int id, long timeStamp, String value) {
         if (!idList.isFile(id))
             return 400;

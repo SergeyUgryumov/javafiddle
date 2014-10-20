@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
+/**
+ * Contains methods operating with the project tree.
+ */
 public class GetProjectRevision {
     private static final String sep = File.separator;
     private static final String prefix = System.getProperty("user.home") + sep + "javafiddle_data" + sep + "user" + sep + "guest";

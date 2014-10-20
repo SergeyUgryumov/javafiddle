@@ -39,6 +39,13 @@ public class RunService {
     @Inject
     private ISessionData sd;
     
+    /**
+     * compile function collects all files of the project and sends them as 
+     * parameters to an object of Compilation class. All of that is run by 
+     * class Task.
+     * @param request
+     * @return 
+     */
     @POST
     @Path("compile")
     public Response compile(
@@ -77,7 +84,12 @@ public class RunService {
         }, LaunchPermissions.getSecureContext());
         return Response.ok().build();
     }
-    
+    /**
+     * execute function collects all runnable files and sends them to class 
+     * Execution. Altogether it goes to the Task class and is executed there. 
+     * @param request
+     * @return 
+     */
     @POST
     @Path("execute")
     public Response execute(
@@ -117,7 +129,11 @@ public class RunService {
         
         return Response.ok().build();
     }
-    
+    /**
+     * Combines compile and execute methods. 
+     * @param request
+     * @return 
+     */
     @POST
     @Path("compilerun")
     @Produces(MediaType.TEXT_HTML)
@@ -189,7 +205,12 @@ public class RunService {
         
         return Response.ok().build();
     }
-
+    /**
+     * Sends output (if any) to the web-page. If there is nothing to put out,
+     * it waits for the thread for some time.
+     * @param request
+     * @return 
+     */
     @GET
     @Path("output")
     @Produces(MediaType.APPLICATION_JSON)
@@ -222,7 +243,12 @@ public class RunService {
         }
         return Response.ok().build();
     }
-    
+    /**
+     * Sends input to the program. 
+     * @param request
+     * @param input Values to be sent to the program.
+     * @return 
+     */
     @POST
     @Path("send")
     @Produces(MediaType.TEXT_HTML)
