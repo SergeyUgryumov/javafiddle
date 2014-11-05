@@ -98,6 +98,19 @@
                      <h:panelGroup layout="block" id="username" >
                         Logged in as <h:link value="#{userBean.profile.nickname}" outcome="index" />
                     </h:panelGroup>
+                    <!-- Log in -->
+                    <div id="log_in" class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-primary" onclick="$('#modal-log_in').modal('show');">
+                            <span class="glyphicon glyphicon-log_in-alt"/> Log in
+                        </button>
+                    </div>
+                    <!-- Registration -->
+                    <div id="registration" class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-primary" onclick="$('#modal-registration').modal('show');">
+                            <span class="glyphicon glyphicon-registration-alt"/> Registration
+                        </button>
+                    </div>
+                    <!-- Share -->
                     <div id="share" class="btn-group btn-group-sm">
                         <button type="button" class="btn btn-primary" onclick="$('#modal-share').modal('show');">
                             <span class="glyphicon glyphicon-share-alt"/> Share Code...
@@ -355,7 +368,59 @@
                 </div>
             </div>
         </div>
-                
+        
+        <!-- Modal log_in --> 
+        <div class="modal fade" id="modal-log_in" tabindex="-1" role="dialog" aria-labelledby="modal-log_in-header" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-log_in-header" id="myModalLabel">Log in...</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                          <label for="modal-log_in-login">Login:</label>
+                          <input id="modal-log_in-login" type="text" class="form-control enter-active" />
+                          <label for="modal-log_in-password">Password:</label>
+                          <input id="modal-log_in-password" type="text" class="form-control enter-active" />
+                          <p id ="modal-log_in-verify"></p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal registration --> 
+        <div class="modal fade" id="modal-registration" tabindex="-1" role="dialog" aria-labelledby="modal-registration-header" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-registration-header" id="myModalLabel">Registration...</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                          <label for="modal-registration-login">Login:</label>
+                          <input id="modal-registration-login" type="text" class="form-control enter-active" />
+                          <label for="modal-registration-email">Email:</label>
+                          <input id="modal-registration-email" type="text" class="form-control enter-active" />
+                          <label for="modal-registration-password">Password:</label>
+                          <input id="modal-registration-password" type="text" class="form-control enter-active" />
+                          <label for="modal-registration-password_again">Password again:</label>
+                          <input id="modal-registration-password_again" type="text" class="form-control enter-active" />
+                          <p id ="modal-registration-verify"></p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Modal share --> 
         <div class="modal fade" id="modal-share" tabindex="-1" role="dialog" aria-labelledby="modal-share-header" aria-hidden="true">
             <div class="modal-dialog">
