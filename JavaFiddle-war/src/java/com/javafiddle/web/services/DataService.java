@@ -203,6 +203,8 @@ public class DataService {
                 Revisions revisions = new Revisions(sd.getIdList(), sd.getFiles());
                 addResult = revisions.addFileRevision(id, timeStamp, value);
         }
+        //Why should we use ternary operator over here?
+        //return Response.status(addResult).build(); works the same way
         return Response.status(addResult == 304 ? 200 : addResult).build();
     }
 }

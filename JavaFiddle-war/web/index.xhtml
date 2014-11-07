@@ -16,6 +16,7 @@
         <h:outputScript library="ace" name="theme-idea.js"/>
  
         <h:outputScript library="js" name="main.js"/>
+        <h:outputScript library="js" name="git.js"/>
         <h:outputScript library="js" name="modal.js"/>
         <h:outputScript library="js" name="sessionstorage.js"/>
         
@@ -86,7 +87,7 @@
                             <li class="dropdown">
                                 <a id="dropdown-history" class="dropdown-toggle" data-toggle="dropdown" href="#">Git</a>
                                 <ul class="dropdown-menu" role="menu" aria-labelledby="dropdown-history">
-                                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="">Commit</a></li>
+                                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="addFile()">Commit</a></li>
                                     <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="">Show History</a></li>
                                 </ul>
                             </li>
