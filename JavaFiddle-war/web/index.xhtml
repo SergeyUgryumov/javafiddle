@@ -373,26 +373,37 @@
         <div class="modal fade" id="modal-log_in" tabindex="-1" role="dialog" aria-labelledby="modal-log_in-header" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                        <h4 class="modal-log_in-header" id="myModalLabel">Log in...</h4>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                          <label for="modal-log_in-login">Login:</label>
-                          <input id="modal-log_in-login" type="text" class="form-control enter-active" />
-                          <label for="modal-log_in-password">Password:</label>
-                          <input id="modal-log_in-password" type="text" class="form-control enter-active" />
-                          <p id ="modal-log_in-verify"></p>
+                    <h:form>
+                        <h:messages errorClass="alert alert-danger" id="loginErrors"/>
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-log_in-header" id="myModalLabel">Log in...</h4>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                    </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                              <label for="modal-log_in-login">Login:</label>
+                              <!-- <input id="modal-log_in-login" type="text" class="form-control enter-active" /> -->
+                              <br></br>
+                              <h:inputText value="#{loginBean.nickname}"></h:inputText>
+                              <br></br>
+                              <label for="modal-log_in-password">Password:</label>
+                              <br></br>
+                              <!-- <input id="modal-log_in-password" type="text" class="form-control enter-active" /> -->
+                              <h:inputSecret value="#{loginBean.password}"></h:inputSecret>
+                              <p id ="modal-log_in-verify"></p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <!-- <button id="modal-log_in-ok" type="button" class="btn btn-primary" data-dismiss="modal">Ok</button> -->
+                            <!-- <h:commandButton action="index" value="submit"></h:commandButton> -->
+                            <h:commandLink class="btn btn-primary" value="Log in" actionListener="#{loginBean.login}"> </h:commandLink>
+                        </div>
+                    </h:form>
                 </div>
             </div>
         </div>
-        
+ 
         <!-- Modal registration --> 
         <div class="modal fade" id="modal-registration" tabindex="-1" role="dialog" aria-labelledby="modal-registration-header" aria-hidden="true">
             <div class="modal-dialog">
@@ -407,15 +418,14 @@
                           <input id="modal-registration-login" type="text" class="form-control enter-active" />
                           <label for="modal-registration-email">Email:</label>
                           <input id="modal-registration-email" type="text" class="form-control enter-active" />
-                          <label for="modal-registration-password">Password:</label>
-                          <input id="modal-registration-password" type="text" class="form-control enter-active" />
-                          <label for="modal-registration-password_again">Password again:</label>
-                          <input id="modal-registration-password_again" type="text" class="form-control enter-active" />
+                          <label for="modal-registration-password">Password:</label >
+                          <input id="modal-registration-password" type="text" class="form-control enter-active" onkeyup="m_newfile_updname();" />
                           <p id ="modal-registration-verify"></p>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button id="modal-registration-ok" type="button" class="btn btn-primary" data-dismiss="modal" onclick="registration();">Ok</button>
                     </div>
                 </div>
             </div>
@@ -443,7 +453,7 @@
             </div>
         </div>
         
-        <!-- Modal commit's list -->
+       <!-- Modal commit's list -->
         <div class="modal flat" id="modal-revisions" tabindex="-1" role="dialog" aria-labelledby="modal-revisions-header" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -463,6 +473,6 @@
                    </div>
                 </div>
             </div>
-        </div>     
+        </div>   
     </h:body>
 </html>

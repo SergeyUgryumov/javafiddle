@@ -13,6 +13,7 @@ import javax.inject.Named;
 @SessionScoped
 public class UserBean implements Serializable {
     
+    
     private Long userId;
     private UserProfile profile;
     
