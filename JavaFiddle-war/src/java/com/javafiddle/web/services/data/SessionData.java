@@ -5,6 +5,13 @@ import com.javafiddle.web.tree.Tree;
 import java.util.TreeMap;
 import javax.enterprise.context.SessionScoped;
 
+/**
+ * Contains information about the project.<br/>
+ * The structure of "files" is the following: <br/>
+ * <i>Integer</i> - id of the file in the tree.<br/>
+ * <i>Long</i> - timestamp.<br/>
+ * <i>String</i> - content of the file.<br/>
+ */
 @SessionScoped
 public class SessionData implements ISessionData {
     
@@ -46,7 +53,10 @@ public class SessionData implements ISessionData {
     public void setIdList(IdList idList) {
         this.idList = idList;
     }
-
+    /**
+     * 
+     * @return 
+     */
     @Override
     public TreeMap<Integer, TreeMap<Long, String>> getFiles() {
         return files;

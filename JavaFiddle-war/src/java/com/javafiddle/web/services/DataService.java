@@ -11,6 +11,9 @@ import com.javafiddle.web.services.utils.Utility;
 import com.javafiddle.web.tree.Tree;
 import com.javafiddle.web.tree.TreeFile;
 import com.javafiddle.web.utils.SessionUtils;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.TreeMap;
@@ -186,7 +189,7 @@ public class DataService {
             @FormParam("id") String idString,
             @FormParam("timeStamp") long timeStamp,
             @FormParam("value") String value
-            ) {
+            ) throws FileNotFoundException, UnsupportedEncodingException {
         if (idString == null || timeStamp == 0 || value == null)
             return Response.status(401).build();
         
