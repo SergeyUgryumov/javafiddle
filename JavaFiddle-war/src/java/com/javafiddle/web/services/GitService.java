@@ -29,6 +29,7 @@ public class GitService {
     
     @Inject
     private ISessionData sd;
+
     /**
      * Receives changed contents of the file from the client, and saves it to the FS.
      * @param request
@@ -46,17 +47,7 @@ public class GitService {
             @FormParam("timeStamp") long time,
             @FormParam("value") String value
     ) throws IOException {
-        int id = Utility.parseId(idString);
-            FileWriter log = new FileWriter("/home/roman/tmp/javafiddle.log");
-            log.write("/webapi/git/file POST\n");
-            log.write("id: " + idString + "\n");
-            log.write("time: " + Long.toString(time) + "\n");
-            log.write("value: " + value + "\n");
-            Tree a = sd.getTree();
-            for (TreeProject tp: a.getProjects()) {
-                log.write("Project name: " + tp.getName() + "\n");
-            }
-        log.close();
+        
         return Response.status(200).build();
     }
 }

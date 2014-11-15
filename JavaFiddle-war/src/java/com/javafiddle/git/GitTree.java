@@ -7,13 +7,14 @@ import java.util.HashMap;
  * The keys in the HashMap are the names of projects, packages and files respectively
  * @author roman
  */
-public class Tree {
+public class GitTree {
     private HashMap<String, //Project Name
              HashMap<String, //Package Name
               HashMap<String,String>>>  //Class Name, it's contents
             projects;
-    public Tree(String projectName) {
-        
+    
+    public GitTree() {
+        this.projects = new HashMap<>();
     }
     public HashMap<String,HashMap<String,String>> getProject(String projectName) {
         return projects.get(projectName);

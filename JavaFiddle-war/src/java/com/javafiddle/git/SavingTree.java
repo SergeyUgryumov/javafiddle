@@ -9,13 +9,13 @@ import java.io.IOException;
  * @author roman
  */
 public class SavingTree {
-    private Tree project;
+    private GitTree project;
     private String username;
     private String sep = System.getProperty("file.separator");
     private String prefix = System.getProperty("user.directory") 
             + sep + "javafiddle_git_data" + sep;
     
-    public SavingTree(Tree project, String username) {
+    public SavingTree(GitTree project, String username) {
         this.project = project;
         this.username = username;
     }
@@ -70,7 +70,7 @@ public class SavingTree {
                 + PackageNameUtility.getPathFromPackage(packageName) + sep + className;
         File clazz = new File(clazzName);
         if (clazz.exists()) {
-            
+            //Need to decide.
         }
         if (clazz.createNewFile()) return;
     }
