@@ -13,12 +13,13 @@ import javax.inject.Named;
 @SessionScoped
 public class UserBean implements Serializable {
     
+    
     private Long userId;
     private UserProfile profile;
     
     @Inject
     private UserManagerLocal um;
-    
+
     @PostConstruct
     private void init() {
         userId = new JSFHelper().getCurrentUserId();
@@ -34,4 +35,7 @@ public class UserBean implements Serializable {
         return profile;
     }
     
+    public void setProfile(UserProfile userProfile) {
+        profile = userProfile;
+    }
 }

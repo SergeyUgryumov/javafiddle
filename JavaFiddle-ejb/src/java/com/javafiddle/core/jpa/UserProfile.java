@@ -72,8 +72,4 @@ public class UserProfile implements Serializable {
         }
         return true;
     }
-    
-    
-    
-    
 }
