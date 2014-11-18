@@ -9,16 +9,16 @@ import java.io.IOException;
  * @author roman
  */
 public class SavingTree {
-    private GitTree project;
+    //private GitTree project;
     private String username;
     private String sep = System.getProperty("file.separator");
     private String prefix = System.getProperty("user.directory") 
             + sep + "javafiddle_git_data" + sep;
     
-    public SavingTree(GitTree project, String username) {
-        this.project = project;
-        this.username = username;
-    }
+//    public SavingTree(GitTree project, String username) {
+//        this.project = project;
+//        this.username = username;
+//    }
     /**
      * Creates one directory for one user.
      * Recognizes if the user is a guest or a real user.

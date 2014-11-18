@@ -1,6 +1,5 @@
 package com.javafiddle.web.services.data;
 
-import com.javafiddle.git.GitTree;
 import static com.javafiddle.web.services.data.SessionData.SEP;
 import com.javafiddle.web.tree.IdList;
 import com.javafiddle.web.tree.Tree;
@@ -27,5 +26,4 @@ public interface ISessionData extends Serializable {
 
     public void setFiles(TreeMap<Integer, TreeMap<Long, String>> files);
     
-    public GitTree getGitTree();
 }

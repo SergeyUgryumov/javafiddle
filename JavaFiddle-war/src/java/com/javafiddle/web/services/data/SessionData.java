@@ -1,6 +1,5 @@
 package com.javafiddle.web.services.data;
 
-import com.javafiddle.git.GitTree;
 import com.javafiddle.web.tree.IdList;
 import com.javafiddle.web.tree.Tree;
 import java.util.HashMap;
@@ -21,7 +20,6 @@ public class SessionData implements ISessionData {
     IdList idList;
     TreeMap<Integer, TreeMap<Long, String>> files;
     //Here comes the new version.
-    GitTree gitTree;
     
     public SessionData() {
         reset();
@@ -31,7 +29,6 @@ public class SessionData implements ISessionData {
         idList = new IdList();
         tree = new Tree();
         files = new TreeMap<>();
-        gitTree = new GitTree();
     }
     
     @Override
@@ -70,9 +67,5 @@ public class SessionData implements ISessionData {
     @Override
     public void setFiles(TreeMap<Integer, TreeMap<Long, String>> files) {
         this.files = files;
-    }
-    @Override
-    public GitTree getGitTree() {
-        return this.gitTree;
     }
 }

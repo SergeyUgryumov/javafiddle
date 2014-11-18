@@ -47,7 +47,15 @@ public class GitService {
             @FormParam("timeStamp") long time,
             @FormParam("value") String value
     ) throws IOException {
+        /*
+        В предыдущем варианте логика была совершенно дикая.
+        Сначала отправляли все в ревизии, там добавляли ревизию, это включало в 
+        себя хранение в RAM... Жесть, короче
         
+        Что предполагаю я: здесь же, никуда не уходя, записывать переданную
+        информацию в дерево, здесь же записывать в файл. Коммит вызывается не тут.
+        */
+        long id = Utility.parseId(idString);
         return Response.status(200).build();
     }
 }
