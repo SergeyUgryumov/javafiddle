@@ -408,25 +408,37 @@
         <div class="modal fade" id="modal-registration" tabindex="-1" role="dialog" aria-labelledby="modal-registration-header" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                        <h4 class="modal-registration-header" id="myModalLabel">Registration...</h4>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                          <label for="modal-registration-login">Login:</label>
-                          <input id="modal-registration-login" type="text" class="form-control enter-active" />
-                          <label for="modal-registration-email">Email:</label>
-                          <input id="modal-registration-email" type="text" class="form-control enter-active" />
-                          <label for="modal-registration-password">Password:</label >
-                          <input id="modal-registration-password" type="text" class="form-control enter-active" onkeyup="m_newfile_updname();" />
-                          <p id ="modal-registration-verify"></p>
+                    <h:form>
+                        <h:messages errorClass="alert alert-danger" id="registerErrors"/>
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-registration-header" id="myModalLabel">Registration...</h4>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                        <button id="modal-registration-ok" type="button" class="btn btn-primary" data-dismiss="modal" onclick="registration();">Ok</button>
-                    </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                              <label for="modal-registration-login">Login:</label>
+                              <!-- <input id="modal-registration-login" type="text" class="form-control enter-active" /> -->
+                              <br></br>
+                              <h:inputText value="#{registrationBean.nickname}"></h:inputText>
+                              <br></br>
+                              <label for="modal-registration-email">Email:</label>
+                              <!-- <input id="modal-registration-email" type="text" class="form-control enter-active" /> -->
+                              <br></br>
+                              <h:inputText value="#{registrationBean.email}"></h:inputText>
+                              <br></br>
+                              <label for="modal-registration-password">Password:</label >
+                              <br></br>
+                              <!--<input id="modal-registration-password" type="text" class="form-control enter-active" onkeyup="m_newfile_updname();" /> -->
+                              <h:inputSecret value="#{registrationBean.password}"></h:inputSecret>
+                              <p id ="modal-registration-verify"></p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <!-- <button id="modal-registration-ok" type="button" class="btn btn-primary" data-dismiss="modal" onclick="registration();">Ok</button> -->
+                            <h:commandLink class="btn btn-primary" value="Log in" actionListener="#{registrationBean.addNewUser}"> </h:commandLink>
+                        </div>
+                    </h:form>
                 </div>
             </div>
         </div>

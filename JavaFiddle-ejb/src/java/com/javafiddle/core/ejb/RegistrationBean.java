@@ -5,103 +5,78 @@
  */
 package com.javafiddle.core.ejb;
 
-import com.javafiddle.core.jpa.User;
-import javax.faces.application.FacesMessage;
-import javax.faces.bean.RequestScoped;
-import javax.faces.context.FacesContext;
-import javax.faces.event.AjaxBehaviorEvent;
-import javax.inject.Inject;
-import javax.inject.Named;
 
 import com.javafiddle.core.ejb.RegistrationBeanLocal;
-
-
+import com.javafiddle.core.jpa.User;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import javax.ejb.Stateful;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 /**
  *
  * @author viktor
  */
-@Named
-@RequestScoped
-public class RegistrationBean {
-    @Inject
-    private RegistrationBeanLocal ejbRegistrationBean;
-   
-    private User user;
-    private String nickname;
-    private String password;
-    private String email;
-    private String repeatPassword;
 
-    public void addNewUser(AjaxBehaviorEvent event){
-        boolean error = false;
-        FacesContext context = FacesContext.getCurrentInstance();
-        if (this.nickname.isEmpty()){    
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Username field is not filled", "Some field input failed"));
-            error = true;
+@Stateful
+public class RegistrationBean implements RegistrationBeanLocal {
+    @PersistenceContext
+    private EntityManager em;
+    
+    private String message;
+    @Override
+    public User addNewUser(String nickname, String password, String email) {
+        User user= null;
+            if (tryAddNewUser(nickname, email)){                 
+                user = new User();
+                user.setNickname(nickname);
+                user.setPassword(getHash(password));
+                user.setEmail(email);
+                //анализирует, является ли объект новой записью для базы данных, и если нет - генерирует 
+                em.persist(user);
+                System.out.println("User has been created: " + user);
+                System.out.println("Change status of user[" + user.getId() + "], current status: " + user.getNickname());
+            }
+            else message = "Nickname or email is not empty";
+        return user;        
+    }
+    // check users with the same nickname and email
+    private boolean tryAddNewUser(String nickname, String email){
+        List<User> users = em.createQuery("select u from User u where u.nickname =:nickname or u.email=:email")
+                    .setParameter("nickname", nickname)
+                    .setParameter("email", email).getResultList();
+        if (users.isEmpty()) 
+            return true;
+        else
+            return false;
+    }
+    // hash function for passwords
+    private String getHash(String str) {
+        
+        MessageDigest md5 ;        
+        StringBuffer  hexString = new StringBuffer();
+        
+        try {                                    
+            md5 = MessageDigest.getInstance("md5");           
+            md5.reset();
+            md5.update(str.getBytes()); 
+                    
+            byte messageDigest[] = md5.digest();
+                        
+            for (int i = 0; i < messageDigest.length; i++) {
+                hexString.append(Integer.toHexString(0xFF & messageDigest[i]));
+            }                                                                                      
+        } 
+        catch (NoSuchAlgorithmException e) {                        
+            return e.toString();
         }
-        if (this.email.isEmpty()){
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Email field is not filled", "Some field input failed"));
-            error = true;
-        }
-        if (this.password.isEmpty() || this.repeatPassword.isEmpty()){
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password field is not filled", "Some field input failed"));
-            error = true;
-        }
-        if (!error && this.password.equals(this.repeatPassword)){
-            user = ejbRegistrationBean.addNewUser(this.nickname, this.password, this.email);
-            if (user == null) 
-                context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, ejbRegistrationBean.getMessage(), ejbRegistrationBean.getMessage()));
-
-        }
-        else  if (!this.password.equals(this.repeatPassword))  
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Passwords are not equal", "Some field input failed"));
-    
-        //System.out.println("ADD NEW USER");
+        
+        return hexString.toString();
     }
-    
-    
-    public RegistrationBean() {
+     
+    @Override
+    public String getMessage(){
+        return this.message;
     }
-    
-    public void setRepeatPassword(String repeatPassword) {
-        this.repeatPassword = repeatPassword;
-    }
-    
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public String getNickname() {
-        return nickname;
-    }
-
-    public void setNickname(String nickname) {
-        this.nickname = nickname;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getRepeatPassword() {
-        return repeatPassword;
-    }
-    
-    
 }

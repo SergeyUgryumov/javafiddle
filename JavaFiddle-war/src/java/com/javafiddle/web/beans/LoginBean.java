@@ -1,12 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.javafiddle.web.beans;
 
 import com.javafiddle.core.jpa.User;
 import com.javafiddle.core.ejb.LoginBeanLocal;
+import com.javafiddle.core.ejb.UserManagerLocal;
 import java.io.Serializable;
 import javax.enterprise.context.SessionScoped;
 import javax.faces.application.FacesMessage;
@@ -36,6 +32,8 @@ public class LoginBean implements Serializable{
     
     // Caused by pushing Log in
     public void login(){
+        System.out.println("Try to log in: login: " + nickname +", password: "+ password); // It works
+        
         boolean error = false;
         FacesContext context = FacesContext.getCurrentInstance();
         if (this.nickname.isEmpty() || this.password.isEmpty()){
@@ -50,11 +48,10 @@ public class LoginBean implements Serializable{
   nh.handleNavigation(fc, null, "profile?faces-redirect=true");   
             //context.addMessage("loginErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "GOOOD", "good"));
             }
-            else    context.addMessage("loginErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "incorrect username or password", "incorrect username or password"));
+            else context.addMessage("loginErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "incorrect username or password", "incorrect username or password"));
         }
-        System.out.println("login is: " + nickname +" password is: "+ password); // It works
     }
-
+ 
     public String getNickname() {
         return nickname;
     }

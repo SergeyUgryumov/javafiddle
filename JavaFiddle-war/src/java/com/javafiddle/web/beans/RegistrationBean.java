@@ -5,16 +5,9 @@
  */
 package com.javafiddle.web.beans;
 
-import javax.faces.application.FacesMessage;
-import javax.faces.bean.RequestScoped;
-import javax.faces.context.FacesContext;
-import javax.faces.event.AjaxBehaviorEvent;
-import javax.inject.Inject;
-import javax.inject.Named;
-
-
 import com.javafiddle.core.ejb.RegistrationBeanLocal;
 import com.javafiddle.core.jpa.User;
+import java.io.Serializable;
 import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
@@ -23,6 +16,7 @@ import javax.faces.context.FacesContext;
 import javax.faces.event.AjaxBehaviorEvent;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.faces.bean.SessionScoped;
 /**
  *
  * @author viktor
@@ -30,7 +24,8 @@ import javax.inject.Named;
 
 @Named
 @RequestScoped
-public class RegistrationBean {
+@ManagedBean
+public class RegistrationBean implements Serializable{
     @Inject
     private RegistrationBeanLocal ejbRegistrationBean;
    
@@ -38,9 +33,9 @@ public class RegistrationBean {
     private String nickname;
     private String password;
     private String email;
-    private String repeatPassword;
 
-    public void addNewUser(AjaxBehaviorEvent event){
+    public void addNewUser(){
+        System.out.println("Try to registrate: login: " + nickname + ", email: " + email + ", password: " + password);
         boolean error = false;
         FacesContext context = FacesContext.getCurrentInstance();
         if (this.nickname.isEmpty()){    
@@ -51,28 +46,21 @@ public class RegistrationBean {
             context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Email field is not filled", "Some field input failed"));
             error = true;
         }
-        if (this.password.isEmpty() || this.repeatPassword.isEmpty()){
+        if (this.password.isEmpty()){
             context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password field is not filled", "Some field input failed"));
             error = true;
         }
-        if (!error && this.password.equals(this.repeatPassword)){
+        if (!error){
             user = ejbRegistrationBean.addNewUser(this.nickname, this.password, this.email);
             if (user == null) 
                 context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, ejbRegistrationBean.getMessage(), ejbRegistrationBean.getMessage()));
 
         }
-        else  if (!this.password.equals(this.repeatPassword))  
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Passwords are not equal", "Some field input failed"));
-    
         //System.out.println("ADD NEW USER");
     }
     
     
     public RegistrationBean() {
-    }
-    
-    public void setRepeatPassword(String repeatPassword) {
-        this.repeatPassword = repeatPassword;
     }
     
     public User getUser() {
@@ -106,10 +94,5 @@ public class RegistrationBean {
     public void setEmail(String email) {
         this.email = email;
     }
-
-    public String getRepeatPassword() {
-        return repeatPassword;
-    }
-    
-    
+        
 }

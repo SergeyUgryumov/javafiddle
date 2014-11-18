@@ -18,11 +18,16 @@ import javax.persistence.Table;
  * @author viktor
  */
 
+/**
+ * Class User is responsible for working with the database
+ */
 @Entity
 @Table(name = "users", schema = "public" )
+// Set name User.getAll for query(SELECT c from User c)
 @NamedQuery(name = "User.getAll", query = "SELECT c from User c")
 public class User implements Serializable{
     private static final long serialVersionUID = 1L;
+    // auto generated column
     @Id
     @Column(name = "user_id")
     @GeneratedValue(strategy = GenerationType.AUTO)

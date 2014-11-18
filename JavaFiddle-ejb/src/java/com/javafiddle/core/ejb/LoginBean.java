@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.javafiddle.core.ejb;
 
 import com.javafiddle.core.jpa.User;
@@ -12,9 +7,6 @@ import java.util.List;
 import javax.ejb.Stateful;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-
-import com.javafiddle.core.jpa.Files;
-import javax.ejb.Stateless;
 
 /**
  *
@@ -26,7 +18,7 @@ public class LoginBean implements LoginBeanLocal {
     private EntityManager em;
 
     private String message;
-    public String getHash(String str) { // функия хэширования (здесь используется для паролей)
+    public String getHash(String str) { // hashing passwords
         
         MessageDigest md5 ;        
         StringBuffer  hexString = new StringBuffer();
@@ -48,11 +40,9 @@ public class LoginBean implements LoginBeanLocal {
         
         return hexString.toString();
     }
-    // check users with these nickname and pwd
+    // check users with these nickname and password
     private boolean tryLogin(String nickname, String pwd) {
-       User currentUser = null;
-       Long userId = null;
-       // list of users with same nick and pwd
+       // list of users with same nick and password, which have been typed
        List<User> pass = em.createQuery("select u from User u where u.nickname =:nickname and u.password=:password")
                     .setParameter("nickname", nickname)
                     .setParameter("password", pwd).getResultList();
@@ -67,20 +57,32 @@ public class LoginBean implements LoginBeanLocal {
     @Override
     public User performLogin(String nickname, String password) {
         User user = null;
+       /* User my = null;
+        my = new User();
+        my.setNickname("viktor");
+        my.setPassword(getHash("123"));
+        my.setEmail("mail");
+        //анализирует, является ли объект новой записью для базы данных, и если нет - генерирует 
+        em.persist(my);
+        List<User> example = em.createQuery("select u.nickname from User u").getResultList();
+        System.out.println("Result " + example);
+        */
         //return list of users with the same nickname
-         List<User> users = em.createQuery("select u from User u where u.nickname =:nickname")
+        List<User> users = em.createQuery("select u from User u where u.nickname =:nickname")
                     .setParameter("nickname", nickname).getResultList();
-       if(users == null || users.size() != 1){
+        if(users == null || users.size() != 1){
            System.out.println("Login is not unique or no user with this login exists!");
           return user;
-       }
-       user = users.get(0);
+        }
+        user = users.get(0);
      
-       String pwd = getHash(password);
-       password = null;
+        String pwd = getHash(password);
+        password = null;
         if(!tryLogin(nickname, pwd)) {
+            System.out.println("Access denied for " +  nickname);
             return null;
         }
+        System.out.println("Access permission for " +  nickname);
         return user;
     }
 }

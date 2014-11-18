@@ -19,7 +19,7 @@ public class UserBean implements Serializable {
     
     @Inject
     private UserManagerLocal um;
-    
+
     @PostConstruct
     private void init() {
         userId = new JSFHelper().getCurrentUserId();
@@ -35,4 +35,7 @@ public class UserBean implements Serializable {
         return profile;
     }
     
+    public void setProfile(UserProfile userProfile) {
+        profile = userProfile;
+    }
 }
