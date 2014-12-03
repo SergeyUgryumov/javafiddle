@@ -1,113 +1,108 @@
 package com.javafiddle.core.ejb;
 
-import com.javafiddle.core.jpa.Project;
-import com.javafiddle.core.jpa.Revision;
-import com.javafiddle.core.jpa.UserProfile;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
+import com.javafiddle.core.jpa.JFClass;
+import com.javafiddle.core.jpa.JFPackage;
+import com.javafiddle.core.jpa.JFProject;
+import com.javafiddle.core.jpa.User;
 import java.util.List;
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.inject.Named;
 import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
 
 /**
- * Handles operations with database Project.
- * It includes revisions operations.
+ * Provides us with global methods for handling project tree.
+ * @author roman
  */
-@Stateless
-public class ProjectManager implements ProjectManagerLocal {
 
+@Named(value = "projectManager")
+@Stateless
+public class ProjectManager {
+    @EJB
+    private JFPackageBean jfpackageBean;
+
+    @EJB
+    private JFProjectBean jfprojectBean;
+    
+    @EJB
+    private JFClassBean jfclassBean;
+    
     @PersistenceContext
     private EntityManager em;
+
+    public String projectsOfUserToJSON(Long userId) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"projects\":[");
+        for (Long projId: this.getProjectsOfUser(userId)) {
+            sb.append("{");
+            sb.append(this.projectTreeToJSON(projId));
+            sb.append("},");
+        }
+        if (!this.getProjectsOfUser(userId).isEmpty()) {
+            sb.delete(sb.length()-1, sb.length());
+        }
+        sb.append("]}");
+        return sb.toString();
+    }
+    /**
+     * Returns project's tree in JSON format.
+     * @param projectId
+     * @return 
+     */
+    public String projectTreeToJSON(Long projectId) {
+        StringBuilder sb = new StringBuilder();
+        JFProject proj = jfprojectBean.getProjectById(projectId);
+        if (proj == null) return null;
+        sb.append("\"id\": ").append(proj.getId()).append(", \"name\": \"");
+        sb.append(proj.getProjectName()).append("\", \"packages\": [");
+        for (Long packId: jfprojectBean.getPackagesOfProject(projectId)) {
+            sb.append("{");
+            sb.append(this.packageToJSON(packId));
+            sb.append("},");
+        }
+        if (!jfprojectBean.getPackagesOfProject(projectId).isEmpty()) {
+            sb.delete(sb.length() - 1, sb.length());
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    public String packageToJSON(Long packageId) {
+        JFPackage pack = jfpackageBean.getPackageById(packageId);
+        if (pack == null) return null;
+        StringBuilder sb = new StringBuilder();
+        sb.append("\"id\":").append(pack.getId()).append(", \"name\": \"");
+        sb.append(pack.getPackageName()).append("\", \"parentId\": \"");
+        sb.append(pack.getJFProject().getId()).append("\", \"files\": [");
+        for (Long classId: jfpackageBean.getClassesOfPackage(packageId)) {
+            sb.append("{");
+            sb.append(this.classToJSON(classId));
+            sb.append("},");
+        }
+        if (!jfpackageBean.getClassesOfPackage(packageId).isEmpty()) {
+            sb.delete(sb.length() - 1, sb.length());
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+    public String classToJSON(Long classId) {
+        JFClass clazz = jfclassBean.getClassById(classId);
+        if (clazz == null) return null;
+        StringBuilder sb = new StringBuilder();
+        sb.append("\"id\": ").append(clazz.getId()).append(", \"name\": \"");
+        String className = clazz.getClassName().substring(0, clazz.getClassName().lastIndexOf("."));
+        String classType = clazz.getClassName().substring(clazz.getClassName().lastIndexOf(".")+1);
+        sb.append(className).append("\", \"type\": \"").append(classType).append("\"");
+        return sb.toString();
+    }
     
-    @Override
-    public Project findById(long projectId) {
-        return em.find(Project.class, projectId);
+    public String getPathForClass(Long classId) {
+        return null;
     }
-
-    @Override
-    public Project findByHashcode(String hashcode) {
-        try {
-            return em.createQuery("select p from Project p where p.hashcode = :hashcode", Project.class)
-                .setParameter("hashcode", hashcode)
-                .getSingleResult();
-        } catch (NoResultException ex) {
-            return null;
-        }
-    }
-
-    @Override
-    public Project createProject(Long userId, String hashcode, String name, String properties) {
-        UserProfile profile = em.find(UserProfile.class, userId);
-        if (profile == null) {
-            System.err.println("User not found: userId="+userId);
-            return null;
-        }
-        Project project = new Project();
-        project.setName(name);
-        project.setHashcode(hashcode);
-        project.setProperties(properties);
-        project.setUserProfile(profile);
-        em.persist(project);
-        
-        return project;
-    }
-
-    @Override
-    public List<Project> getUserProjects(long userId) {
-        UserProfile profile = em.find(UserProfile.class, userId);
-        if (profile == null) {
-            System.err.println("User not found: userId="+userId);
-            return null;
-        }
-        return em.createQuery("select p from Project p where p.userProfile = :profile", Project.class)
-                .setParameter("profile", profile)
+    
+    public List<Long> getProjectsOfUser(Long userId) {
+        return em.createQuery("select p.id from JFProject p where p.user =:user")
+                .setParameter("user", em.find(User.class, userId))
                 .getResultList();
     }
-
-    @Override
-    public Revision addTree(long projectId, Long parentId, String hashcode, Date date, String comment) {
-        Project project = findById(projectId);
-        Revision parent = parentId == null ? null : findTreeById(parentId);
-        Revision tree = new Revision();
-        tree.setHashcode(hashcode);
-        tree.setParent(parent);
-        tree.setProject(project);
-        tree.setCreationDate(date);
-        tree.setComment(comment);
-        em.persist(tree);
-        
-        return tree;
-    }
-
-    @Override
-    public List<Revision> getProjectTrees(long treeId) {
-        List<Revision> result = new ArrayList<>();
-        Revision tree = em.find(Revision.class, treeId);
-        while(tree != null) {
-            result.add(tree);
-            tree = tree.getParent();
-        }
-        Collections.reverse(result);
-        return result;
-    }
-
-    @Override
-    public Revision findTreeById(long treeId) {
-        return em.find(Revision.class, treeId);
-    }
-
-    @Override
-    public Revision findTreeByHashcode(String hashcode) {
-        try {
-            return em.createQuery("select t from Revision t where t.hashcode = :hashcode", Revision.class)
-                .setParameter("hashcode", hashcode)
-                .getSingleResult();
-        } catch (NoResultException ex) {
-            return null;
-        }
-    }
-    
 }
