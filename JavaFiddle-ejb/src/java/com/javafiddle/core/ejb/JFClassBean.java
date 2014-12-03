@@ -29,6 +29,15 @@ public class JFClassBean {
         return em.find(JFClass.class, id);
     }
     
+    public JFClass getClassByName(Long packageId, String className){
+        JFPackage pack = em.find(JFPackage.class, packageId);
+        return (JFClass) em.createQuery("select c from JFClass c "
+                + "where c.jfpackage =:pack and c.className =:name")
+                .setParameter("pack", pack)
+                .setParameter("name", className)
+                .getSingleResult();
+    }
+    
     public void addClass(String className, String content, Long packageId) {
         JFClass clazz = new JFClass();
         clazz.setClassName(className);

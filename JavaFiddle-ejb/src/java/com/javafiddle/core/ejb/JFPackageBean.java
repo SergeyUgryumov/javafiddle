@@ -28,6 +28,14 @@ public class JFPackageBean {
     public JFPackage getPackageById(Long id) {
         return em.find(JFPackage.class, id);
     }
+    public JFPackage getPackageByName(Long projectId, String packageName) {
+        JFProject proj = em.find(JFProject.class, projectId);
+        return (JFPackage) em.createQuery("select p from JFPackage p "
+                + "where p.jfproject =:proj and p.packageName =:name")
+                .setParameter("proj", proj)
+                .setParameter("name", packageName)
+                .getSingleResult();
+    }
     
     public String getPackageName(Long id) {
         return this.getPackageById(id).getPackageName();

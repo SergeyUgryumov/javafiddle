@@ -5,6 +5,8 @@
  */
 package com.javafiddle.core.ejb;
 
+import com.javafiddle.core.jpa.JFClass;
+import com.javafiddle.core.jpa.JFPackage;
 import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.core.jpa.User;
 import java.util.List;
@@ -35,6 +37,15 @@ public class JFProjectBean {
     public JFProject getProjectById(Long projectId) {
         return em.find(JFProject.class, projectId);
     }
+    public JFProject getProjectByName(Long userId, String projectName) {
+        User user = em.find(User.class, userId);
+        return (JFProject) em.createQuery("select p from JFProject p "
+                + "where p.user =:user and p.projectName =:name")
+                .setParameter("pack", user)
+                .setParameter("name", projectName)
+                .getSingleResult();
+    }
+    
     public String getProjectName(Long projectId) {
         return this.getProjectById(projectId).getProjectName();
     }
