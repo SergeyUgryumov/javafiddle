@@ -2,6 +2,9 @@ package com.javafiddle.web.services;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.javafiddle.core.ejb.JFPackageBean;
+import com.javafiddle.core.ejb.JFProjectBean;
+import com.javafiddle.core.ejb.ProjectManager;
 import com.javafiddle.revisions.Revisions;
 import com.javafiddle.web.services.data.ISessionData;
 import com.javafiddle.web.services.utils.Utility;
@@ -14,6 +17,7 @@ import com.javafiddle.web.tree.TreePackage;
 import com.javafiddle.web.tree.TreeProject;
 import java.util.ArrayList;
 import java.util.List;
+import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -35,6 +39,14 @@ import javax.ws.rs.core.Response;
 @Path("tree")
 @RequestScoped
 public class TreeService {
+    @EJB
+    private ProjectManager pm;
+    
+    @EJB
+    private JFPackageBean packBean;
+    
+    @EJB
+    private JFProjectBean projBean;
     
     @Inject
     private ISessionData sd;
@@ -242,7 +254,7 @@ public class TreeService {
             projects.add(temp.getName());
 
         Gson gson = new GsonBuilder().create();
-        return Response.ok(gson.toJson(projects), MediaType.APPLICATION_JSON).build();
+        return Response.ok(gson.toJson(projects), MediaType.APPLICATION_JSON).build();        
     }
     
     @GET
