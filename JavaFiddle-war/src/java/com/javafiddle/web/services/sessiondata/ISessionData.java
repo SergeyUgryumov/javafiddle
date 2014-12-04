@@ -9,4 +9,8 @@ public interface ISessionData {
     public Long getUserId();
     
     public void setUserId(Long userId);
+    
+    public Long getCurrentProjectId();
+    
+    public void setCurrentProjectId(Long projectId);
 }
