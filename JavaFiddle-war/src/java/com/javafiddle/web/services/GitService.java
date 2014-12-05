@@ -1,9 +1,12 @@
 package com.javafiddle.web.services;
 
-import com.javafiddle.web.services.data.ISessionData;
+import com.javafiddle.web.services.sessiondata.ISessionData;
 import com.javafiddle.web.services.utils.Utility;
 import com.javafiddle.web.tree.Tree;
 import com.javafiddle.web.tree.TreeProject;
+import com.javafiddle.core.ejb.*;
+import com.javafiddle.core.jpa.*;
+import com.javafiddle.git.GitHandler;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,13 +17,16 @@ import java.io.UnsupportedEncodingException;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("git")
@@ -30,32 +36,40 @@ public class GitService {
     @Inject
     private ISessionData sd;
 
-    /**
-     * Receives changed contents of the file from the client, and saves it to the FS.
-     * @param request
-     * @param idString 
-     * @param time
-     * @param value
-     * @return 
-     */
-    @Path("file")
+    @EJB
+    JFProjectBean projectBean;
+    
+    @EJB
+    UserBean userBean;
+    
+    @EJB
+    ProjectManager pm;
+    
     @POST
-    @RequestScoped
-    public Response saveFile(
+    @Path("commit")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response commit(
             @Context HttpServletRequest request,
-            @FormParam("id") String idString,
-            @FormParam("timeStamp") long time,
-            @FormParam("value") String value
-    ) throws IOException {
-        /*
-        В предыдущем варианте логика была совершенно дикая.
-        Сначала отправляли все в ревизии, там добавляли ревизию, это включало в 
-        себя хранение в RAM... Жесть, короче
-        
-        Что предполагаю я: здесь же, никуда не уходя, записывать переданную
-        информацию в дерево, здесь же записывать в файл. Коммит вызывается не тут.
-        */
-        long id = Utility.parseId(idString);
-        return Response.status(200).build();
+            @FormParam("commitMessage") String commitMsg) {
+        User user = userBean.getUserById(sd.getUserId());
+        GitHandler git = new GitHandler(user.getNickname(),user.getEmail(),
+            pm.getPathForProject(sd.getCurrentProjectId()));
+        String hash = git.commit(commitMsg);
+        return Response.ok(hash,MediaType.TEXT_PLAIN).build();
     }
+    @POST
+    @Path("add")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response add(
+            @Context HttpServletRequest request,
+            @FormParam("classId") String rawClassId){
+        Long classId = Integer.toUnsignedLong(Utility.parseId(rawClassId));
+        User user = userBean.getUserById(sd.getUserId());
+        GitHandler git = new GitHandler(user.getNickname(),user.getEmail(),
+            pm.getPathForProject(sd.getCurrentProjectId()));
+        String path = pm.getPathForClass(classId);
+        git.addFileToRepo(path);
+        return Response.ok().build();
+    }
+
 }

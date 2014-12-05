@@ -49,9 +49,9 @@ public class GitHandler {
      * Adds the specified file to the repo.
      * @param pathToFile MUST BE A RELATIVE PATH!
      */
-    public void addFileToRepo(String relPathToFile) {
+    public void addFileToRepo(String pathToFile) {
         AddCommand add = this.git.add();
-        add.addFilepattern(relPathToFile);
+        add.addFilepattern(pathToFile);
         try {
             add.call();
         } catch (GitAPIException ex) {
@@ -59,17 +59,9 @@ public class GitHandler {
         }
     }
     /**
-     * 
-     * @param newPathToFile MUST BE A RELATIVE PATH
-     */
-    public void renameFileInRepo(String newPathToFile) {
-        this.addFileToRepo(newPathToFile);
-    }
-    /**
-     * Still need to think what this function is supposed to return.
-     * I guess it will return a hash, but still need to check that out...
-     * @param pathToRepo
+     * Commits current state of the project.
      * @param message
+     * @return 
      */
     public String commit(String message) {
         CommitCommand commit = git.commit();
@@ -77,11 +69,13 @@ public class GitHandler {
         commit.setCommitter(this.name, this.email);
         try {
             RevCommit commitRes = commit.call();
-            return commitRes.abbreviate(10).name();
+            return commitRes.abbreviate(10).name(); //So that is the hash.
         } catch (GitAPIException ex) {
             Logger.getLogger(GitHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return null;
+        finally {
+            return null;
+        }
     }
     /**
      * Map of times and SHA-1 hashes.

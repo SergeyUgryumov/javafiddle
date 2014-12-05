@@ -37,4 +37,10 @@ public class Utility {
         Revisions revisions = new Revisions(idList, files);
         revisions.addFileRevision(main, idList);
     }
+    
+    public static String addExampleTree() {
+        return "{\"projects\":[{\"id\": 301, \"name\": \"first_proj\", "
+                + "\"packages\": [{\"id\":302, \"name\": \"firstpackage\", \"parentId\": \"301\", "
+                + "\"files\": [{\"id\": 303, \"name\": \"main\", \"type\": \"java\"}]}]}]} ";
+    }
 }

@@ -66,7 +66,7 @@ public class FileSaver {
         dir.mkdirs();
     }
     public static void deleteObject(String path) {
-        File object = null;
+        File object;
         if (path.startsWith(PREFIX)) {
             object = new File(path); // for the recursive call.
         }

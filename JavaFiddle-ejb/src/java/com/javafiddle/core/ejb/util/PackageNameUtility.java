@@ -1,4 +1,4 @@
-package com.javafiddle.git.util;
+package com.javafiddle.core.ejb.util;
 
 /**
  * Class with methods for parsing package names.

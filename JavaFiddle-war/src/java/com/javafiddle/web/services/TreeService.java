@@ -2,11 +2,14 @@ package com.javafiddle.web.services;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.javafiddle.core.ejb.JFClassBean;
 import com.javafiddle.core.ejb.JFPackageBean;
 import com.javafiddle.core.ejb.JFProjectBean;
 import com.javafiddle.core.ejb.ProjectManager;
+import com.javafiddle.core.jpa.JFPackage;
+import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.revisions.Revisions;
-import com.javafiddle.web.services.data.ISessionData;
+import com.javafiddle.web.services.sessiondata.ISessionData;
 import com.javafiddle.web.services.utils.Utility;
 import static com.javafiddle.web.tree.IdNodeType.FILE;
 import static com.javafiddle.web.tree.IdNodeType.PACKAGE;
@@ -48,6 +51,9 @@ public class TreeService {
     @EJB
     private JFProjectBean projBean;
     
+    @EJB
+    private JFClassBean classBean;
+    
     @Inject
     private ISessionData sd;
     
@@ -57,9 +63,12 @@ public class TreeService {
     public Response getTree(
             @Context HttpServletRequest request
             ) {
-        if(sd.getTree().isEmpty())
-            Utility.addExampleTree(sd.getTree(), sd.getIdList(), sd.getFiles());
-        return Response.ok(sd.getTree().toJSON(), MediaType.APPLICATION_JSON).build();
+        String treeInJSON;
+        if(sd.getCurrentProjectId() == 0)
+            treeInJSON = Utility.addExampleTree();
+        else 
+            treeInJSON = pm.projectTreeToJSON(sd.getCurrentProjectId());
+        return Response.ok(treeInJSON, MediaType.APPLICATION_JSON).build();
     }
         
     @POST
@@ -72,10 +81,8 @@ public class TreeService {
             ) {
         if (packageName == null || projectName == null)
             return Response.status(401).build();
-        
-        TreeProject tpr = sd.getTree().getProject(sd.getIdList(), projectName);
-        tpr.addPackage(sd.getIdList(), packageName);
-        
+        packBean.addPackage(projBean.getProjectByName(sd.getUserId(), projectName).getId(),
+                packageName);
         return Response.ok().build();
     }
      
@@ -92,15 +99,13 @@ public class TreeService {
             ) {
         if (className == null || packageName == null || projectName == null || type == null)
             return Response.status(401).build();
-        
-        TreeProject project = sd.getTree().getProject(sd.getIdList(), projectName);
-        TreePackage pack = project.getPackage(packageName);
-        TreeFile file = pack.addFile(sd.getIdList(), type, className.endsWith(".java") ? className  : className + ".java");
-        Revisions revisions = new Revisions(sd.getIdList(), sd.getFiles());
-        revisions.addFileRevision(file, sd.getIdList());
+        Long projId = projBean.getProjectByName(sd.getUserId(), projectName).getId();
+        Long packId = packBean.getPackageByName(projId, packageName).getId();
+        classBean.addClass(className, null, packId);
+        Long newClassId = classBean.getClassByName(packId, className).getId();
         
         Gson gson = new GsonBuilder().create();
-        return Response.ok(gson.toJson(file.getId()), MediaType.APPLICATION_JSON).build();
+        return Response.ok(gson.toJson(newClassId), MediaType.APPLICATION_JSON).build();
     }
     
     @POST
@@ -115,7 +120,7 @@ public class TreeService {
             return Response.status(401).build();
         
         int id = Utility.parseId(idString);
-        sd.getIdList().get(id).setName(name);
+        classBean.renameClass(classBean.getClassById(Integer.toUnsignedLong(id)).getId(), name);
         
         return Response.ok().build();
     }
@@ -131,25 +136,7 @@ public class TreeService {
             return Response.status(401).build();
         
         int id = Utility.parseId(idString);
-        if (!sd.getIdList().isExist(id))
-            return Response.status(400).build();
-        switch (sd.getIdList().getType(id)) {
-            case PROJECT:
-                sd.getTree().deleteProject(sd.getIdList(), id);
-                break;
-            case PACKAGE:
-                TreePackage tp = sd.getIdList().getPackage(id);
-                TreeProject tpr = sd.getIdList().getProject(tp.getProjectId());
-                tpr.deletePackage(sd.getIdList(), id);
-                break;
-            case FILE:
-                TreeFile tf = sd.getIdList().getFile(id);
-                TreePackage tpack = sd.getIdList().getPackage(tf.getPackageId());
-                tpack.deleteFile(sd.getIdList(), id);
-                break;
-            default:
-                break;
-        }
+        //Запилить после ответа Сереги.
         return Response.ok().build();
     }
     
@@ -162,6 +149,7 @@ public class TreeService {
             ) {
         if (name == null)
             return Response.status(401).build();
+        
         
         if(name.matches("([a-zA-Z][a-zA-Z0-9_]*)"))
             return Response.ok("\"ok\"", MediaType.APPLICATION_JSON).build();
@@ -186,21 +174,11 @@ public class TreeService {
         if (packageName.endsWith("."))
             packageName = packageName.substring(0, packageName.length()-1);
         
-        TreeProject project = sd.getTree().getProject(sd.getIdList(), projectName);
-        if (project == null)
+        JFProject proj = projBean.getProjectByName(sd.getUserId(), projectName);
+        
+        if (projBean.getNamesOfPackagesOfProject(proj.getId()).contains(packageName))
             return Response.ok("\"wrongprojectname\"", MediaType.APPLICATION_JSON).build();
         
-        ArrayList<TreePackage> packagesList = project.getPackages();
-        for (TreePackage temp : packagesList) {
-            String tempName = temp.getName();
-            while (tempName.contains(".")) {
-                if (tempName.equals(packageName))
-                    return Response.ok("\"used\"", MediaType.APPLICATION_JSON).build();
-                tempName = tempName.substring(0, tempName.lastIndexOf("."));
-            }
-            if (tempName.equals(packageName))
-                return Response.ok("\"used\"", MediaType.APPLICATION_JSON).build();
-        }
         return Response.ok("\"ok\"", MediaType.APPLICATION_JSON).build();
     }
     
@@ -225,21 +203,15 @@ public class TreeService {
         if (!name.endsWith(".java"))
             name += ".java";
                 
-        TreeProject project = sd.getTree().getProject(sd.getIdList(), projectName);
-        if (project == null)
+        JFProject proj = projBean.getProjectByName(sd.getUserId(), projectName);
+        
+        if (proj == null)
             return Response.ok("\"unknownproject\"", MediaType.APPLICATION_JSON).build();
-        TreePackage pack = project.getPackage(packageName);
+        JFPackage pack = packBean.getPackageByName(proj.getId(), packageName);
         if (pack == null)
             return Response.ok("\"unknownpack\"", MediaType.APPLICATION_JSON).build();
-        List<TreeFile> filesList = pack.getFiles();
-        Boolean exist = false;
-        for(TreeFile file : filesList)
-            if(file.getName().equals(name)) {
-                exist = true;
-                break;
-            }
         
-        if (exist)
+        if (packBean.getNamesOfClassesOfPackage(pack.getId()).contains(name))
             return Response.ok("\"used\"", MediaType.APPLICATION_JSON).build();
         return Response.ok("\"ok\"", MediaType.APPLICATION_JSON).build();
     }
@@ -249,10 +221,8 @@ public class TreeService {
     public Response getProjectsList(
             @Context HttpServletRequest request
             ) {
-        ArrayList<String> projects = new ArrayList<>();
-        for(TreeProject temp : sd.getTree().getProjects())
-            projects.add(temp.getName());
-
+        List<String> projects = pm.getNamesOfProjectsOfUser(sd.getUserId());
+        
         Gson gson = new GsonBuilder().create();
         return Response.ok(gson.toJson(projects), MediaType.APPLICATION_JSON).build();        
     }
@@ -263,15 +233,13 @@ public class TreeService {
             @Context HttpServletRequest request,
             @QueryParam("projectname") String projectname
             ) {
-        ArrayList<String> packages = new ArrayList<>();
-        TreeProject project = sd.getTree().getProject(sd.getIdList(), projectname);
+        JFProject project = projBean.getProjectByName(sd.getUserId(), projectname);
         if (project == null)
             return Response.status(Response.Status.BAD_REQUEST).build();
-        for(TreePackage temp : project.getPackages()) 
-            packages.add(temp.getName());
         
         Gson gson = new GsonBuilder().create();
-        return Response.ok(gson.toJson(packages), MediaType.APPLICATION_JSON).build();
+        return Response.ok(gson.toJson(projBean.getNamesOfPackagesOfProject(project.getId())), 
+                MediaType.APPLICATION_JSON).build();
     }
     
     // other/temp
@@ -282,10 +250,8 @@ public class TreeService {
     public Response getLastHash(
             @Context HttpServletRequest request
             ) {
-        Gson gson = new GsonBuilder().create();
-        if(sd.getTree().getHashes().getHash() == null)
-            return Response.ok().build();
-        return Response.ok(gson.toJson(sd.getTree().getHashes().getHash()), MediaType.APPLICATION_JSON).build();
+        //Разобраться позжа
+        return Response.ok(null, MediaType.APPLICATION_JSON).build();
     }
     
     @GET
@@ -299,6 +265,7 @@ public class TreeService {
             return Response.status(401).build();
         
         TreeFile tf;
+        String content;
         switch(idString) {
             case "about_tab":
                 tf = new TreeFile("About", "help"); 
@@ -308,7 +275,8 @@ public class TreeService {
                 break;
             default:
                 int id = Utility.parseId(idString);
-                tf = sd.getIdList().getFile(id);
+                tf = new TreeFile(classBean.getClassName(Integer.toUnsignedLong(id)),"runnable");
+                content = classBean.getClassContent(Integer.toUnsignedLong(id));
         }
         if (tf == null)
             return Response.status(410).build();
@@ -324,16 +292,16 @@ public class TreeService {
             @Context HttpServletRequest request,
             @QueryParam("id") String idString
             ) {
-        if (idString == null)
-            return Response.status(401).build();
-        
-        int id = Utility.parseId(idString);
-        
-        TreeNode tn = sd.getIdList().get(id);
-        
-        if (tn != null)
-            return Response.ok("\"" + tn.getName() +"\"", MediaType.APPLICATION_JSON).build();
-        else
+//        if (idString == null)
+//            return Response.status(401).build();
+//        
+//        int id = Utility.parseId(idString);
+//        
+//        TreeNode tn = sd.getIdList().get(id);
+//        
+//        if (tn != null)
+//            return Response.ok("\"" + tn.getName() +"\"", MediaType.APPLICATION_JSON).build();
+//        else
             return Response.status(Response.Status.BAD_REQUEST).build();
     }
 }

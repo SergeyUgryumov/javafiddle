@@ -5,9 +5,11 @@ import com.google.gson.GsonBuilder;
 import com.javafiddle.core.ejb.JFClassBean;
 import com.javafiddle.core.ejb.JFPackageBean;
 import com.javafiddle.core.ejb.JFProjectBean;
+import com.javafiddle.core.ejb.ProjectManager;
 import com.javafiddle.core.jpa.JFClass;
 import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.revisions.Revisions;
+import com.javafiddle.saving.FileSaver;
 import com.javafiddle.saving.GetProjectRevision;
 import com.javafiddle.saving.ProjectRevisionSaver;
 import com.javafiddle.web.services.sessiondata.ISessionData;
@@ -17,11 +19,14 @@ import com.javafiddle.web.tree.Tree;
 import com.javafiddle.web.tree.TreeFile;
 import com.javafiddle.web.utils.SessionUtils;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
@@ -50,6 +55,9 @@ public class DataService {
     
     @Inject
     private ISessionData sd;
+    
+    @EJB
+    ProjectManager pm;
     
     @EJB
     JFProjectBean jfprojectBean;
@@ -107,19 +115,29 @@ public class DataService {
         JFProject proj = jfprojectBean.getProjectById(sd.getCurrentProjectId());
         for (Long packId: jfprojectBean.getPackagesOfProject(sd.getCurrentProjectId())) {
             for (Long classId: jfpackageBean.getClassesOfPackage(packId)) {
-                //1 - get file's path
-                //2 - get the content of the file
-                //3 - get the content from the db
-                //4 - compare
-                //5 - if smth is different - overwrite it
+                try {
+                    //1 - get file's path
+                    String path = pm.getPathForClass(classId);
+                    //2 - get the content of the file
+                    String oldContent = FileSaver.getContentOfFile(path);
+                    //3 - get the content from the db
+                    String newContent = jfclassBean.getClassContent(classId);
+                    //4 - compare
+                    if (newContent.equals(oldContent)) 
+                        continue;
+                    //5 - if smth is different - overwrite it
+                    FileSaver.writeToFile(path, newContent);
+                } catch (IOException ex) {
+                    Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
               
-        return Response.ok("hash", MediaType.TEXT_PLAIN).build();
+        return Response.ok("STILL HAVE TO ADD THE FUCKING HASH FROM GIT", MediaType.TEXT_PLAIN).build();
     }
     
     /**
-     * Still need to understand what this shit is.
+     * Still need to understand what this shit is. OK, got it, it goes to Git.
      * <br/>Returns the hierarchy of the project basing on it's id in JSON format.
      * <br/>Used to return the hierarchy of the project basing on it's hash. 
      * @param request
@@ -131,6 +149,9 @@ public class DataService {
     public Response getTreeHierarchy( 
             @Context HttpServletRequest request
             ) {
+        
+        //To be implemented by git
+        
 //        GetProjectRevision gpr = new GetProjectRevision(sd.getTree().getHashes());
 //        ArrayList<Tree> trees = gpr.findParents(sd.getTree());
 //        if (trees == null)
@@ -226,8 +247,17 @@ public class DataService {
                 Long id = Integer.toUnsignedLong(Utility.parseId(idString));
                 JFClass clazz = this.jfclassBean.getClassById(id);
                 //1 - get class'es path in the file system
+                String path = pm.getPathForClass(id);
                 //2 - get the content from the database
-                //3 - save it to the file system
+                String newContent = jfclassBean.getClassById(id).getContent();
+                {
+                    try {
+                        //3 - save it to the file system
+                        FileSaver.writeToFile(path, newContent);
+                    } catch (IOException ex) {
+                        Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
                 addResult = 200;
         }
         return Response.status(addResult).build();

@@ -1,9 +1,11 @@
 package com.javafiddle.core.ejb;
 
+import com.javafiddle.core.ejb.util.PackageNameUtility;
 import com.javafiddle.core.jpa.JFClass;
 import com.javafiddle.core.jpa.JFPackage;
 import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.core.jpa.User;
+import java.io.File;
 import java.util.List;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -97,11 +99,32 @@ public class ProjectManager {
     }
     
     public String getPathForClass(Long classId) {
-        return null;
+        JFClass clazz = jfclassBean.getClassById(classId);
+        JFPackage pack = clazz.getJFPackage();
+        JFProject proj = pack.getJFProject();
+        User user = proj.getUser();
+        String SEP = File.separator;
+        String path = user.getNickname() + SEP + proj.getProjectName() 
+                +"src" + SEP + "main" + SEP;
+        path += PackageNameUtility.getPathFromPackage(pack.getPackageName());
+        path += SEP;
+        path += clazz.getClassName();
+        return path;
+    }
+    
+    public String getPathForProject(Long projectId) {
+        JFProject project = jfprojectBean.getProjectById(projectId);
+        User user = project.getUser();
+        return user.getNickname() + File.separator + project.getProjectName();
     }
     
     public List<Long> getProjectsOfUser(Long userId) {
         return em.createQuery("select p.id from JFProject p where p.user =:user")
+                .setParameter("user", em.find(User.class, userId))
+                .getResultList();
+    }
+    public List<String> getNamesOfProjectsOfUser(Long userId) {
+        return em.createQuery("select p.projectName from JFProject p where p.user =:user")
                 .setParameter("user", em.find(User.class, userId))
                 .getResultList();
     }

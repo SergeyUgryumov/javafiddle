@@ -65,4 +65,10 @@ public class JFPackageBean {
                 .setParameter("package", pack)
                 .getResultList();
     }
+    public List<String> getNamesOfClassesOfPackage(Long packageId) {
+        JFPackage pack = this.getPackageById(packageId);
+        return em.createQuery("select c.className from JFClass c where c.jfpackage =:package")
+                .setParameter("package", pack)
+                .getResultList();
+    }
 }

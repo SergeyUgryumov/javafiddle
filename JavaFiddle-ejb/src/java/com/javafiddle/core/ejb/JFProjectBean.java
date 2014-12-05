@@ -63,4 +63,10 @@ public class JFProjectBean {
                 .setParameter("project", proj)
                 .getResultList();
     }
+    public List<String> getNamesOfPackagesOfProject(Long projectId) {
+        JFProject proj = this.getProjectById(projectId);
+        return em.createQuery("select p.packageName from JFPackage p where p.jfproject =:project")
+                .setParameter("project", proj)
+                .getResultList();
+    }
 }
