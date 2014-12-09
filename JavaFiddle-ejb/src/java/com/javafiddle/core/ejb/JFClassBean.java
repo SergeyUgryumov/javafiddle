@@ -25,7 +25,6 @@ public class JFClassBean {
     public JFClassBean() {}
     
     public JFClass getClassById(Long id) {
-        
         return em.find(JFClass.class, id);
     }
     
@@ -38,13 +37,15 @@ public class JFClassBean {
                 .getSingleResult();
     }
     
-    public void addClass(String className, String content, Long packageId) {
+    public JFClass addClass(String className, String content, Long packageId, Long time) {
         JFClass clazz = new JFClass();
         clazz.setClassName(className);
         clazz.setContent(content);
         JFPackage pr = em.find(JFPackage.class, packageId);
         clazz.setJFPackage(pr);
+        clazz.setLastSaveTime(time);
         em.persist(clazz);
+        return this.getClassByName(packageId, className); 
     }
 
     public String getClassName(Long id) {
@@ -55,18 +56,23 @@ public class JFClassBean {
         return this.getClassById(id).getContent();
     }
     
-    public void renameClass(Long id, String newName) {
-        JFClass clazz = this.getClassById(id);
-        clazz.setClassName(newName);
-        em.persist(clazz);
+    public Long getLastSaveTime(Long id) {
+        return this.getClassById(id).getLastSaveTime();
     }
     
     public void updateContent(Long id, String content) {
         JFClass clazz = this.getClassById(id);
         clazz.setContent(content);
-        em.persist(content);
+        em.persist(clazz);
     }
-    public void deleteClass(Long id) {
+
+    public void rename(Long id, String newName) {
+        JFClass clazz = this.getClassById(id);
+        clazz.setClassName(newName);
+        em.persist(clazz);
+    }
+
+    public void delete(Long id) {
         JFClass clazz = this.getClassById(id);
         em.remove(clazz);
     }

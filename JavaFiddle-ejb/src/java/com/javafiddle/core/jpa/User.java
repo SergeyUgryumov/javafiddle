@@ -104,6 +104,6 @@ public class User implements Serializable{
 
     @Override
     public String toString() {
-        return "testsjdk7.jpa.Users[ id=" + id + " ]";
+        return "testsjdk7.jpa.Users[ id=" + id + ", nickname=" + nickname + "]";
     }
 }

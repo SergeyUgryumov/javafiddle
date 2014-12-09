@@ -101,7 +101,7 @@ function getCurrentFileText() {
         editor.session.getUndoManager().reset();
         editor.setReadOnly(false);
     } else
-        getFileRevision(id);
+        getFileContent(id);
     
     changeModifiedState(id, modified);
 }

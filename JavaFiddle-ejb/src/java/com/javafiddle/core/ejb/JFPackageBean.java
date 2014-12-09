@@ -20,7 +20,7 @@ import javax.persistence.PersistenceContext;
  */
 @Named (value = "packageBean")
 @Stateless
-public class JFPackageBean {
+public class JFPackageBean{
 
     @PersistenceContext
     EntityManager em;
@@ -41,21 +41,22 @@ public class JFPackageBean {
         return this.getPackageById(id).getPackageName();
     }
 
-    public void addPackage(Long projectId, String packageName) {
+    public JFPackage addPackage(Long projectId, String packageName) {
         JFPackage newPack = new JFPackage();
         newPack.setPackageName(packageName);
         JFProject pr = em.find(JFProject.class, projectId);
         newPack.setJFProject(pr);
         em.persist(newPack);
+        return this.getPackageByName(projectId, packageName);
     }
     
-    public void renamePackage(Long packageId, String newPackName) {
+    public void rename(Long packageId, String newPackName) {
         JFPackage pack = this.getPackageById(packageId);
         pack.setPackageName(newPackName);
         em.persist(pack);
     }
     
-    public void deletePackage(Long packageId) {
+    public void delete(Long packageId) {
         JFPackage pack = this.getPackageById(packageId);
         em.remove(pack);
     }

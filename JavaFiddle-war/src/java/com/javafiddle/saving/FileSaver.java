@@ -17,8 +17,19 @@ public class FileSaver {
     private final static String SEP = File.separator;
     private final static String PREFIX = System.getProperty("user.home") 
             + SEP + "javafiddle_data" + SEP;
-    
+    /**
+     * Creates all of the necessary directories and an empty file itself.
+     * @param path
+     * @throws IOException 
+     */
     public static void createFile(String path) throws IOException {
+        String dirs = PREFIX + path.substring(0, path.lastIndexOf(File.separator));
+        //System.out.println("FileSaver:Create File: " + dirs);
+        File dirPath = new File(dirs);
+        if (!dirPath.exists()) {
+            //System.out.println("FileSaver: managed to create dirs: " + dirPath.mkdirs());
+            dirPath.mkdirs();
+        }
         File file = new File(PREFIX + path);
         if (file.exists()) 
             return;
@@ -36,11 +47,16 @@ public class FileSaver {
     public static void writeToFile(String path, String content) 
             throws FileNotFoundException, IOException {
         File file = new File(PREFIX + path);
-        file.delete();
-        file.createNewFile();
-        PrintWriter writer = new PrintWriter(file);
-        writer.write(content);
-        writer.close();
+        //System.out.println("FileSaver: " + file.getAbsolutePath());
+        if (!file.exists())
+            FileSaver.createFile(path);
+        else 
+            file.delete();
+        System.out.println("FileSaver: writeToFile: managed to create new file:" + file.createNewFile());
+        System.out.println("FileSaver: writeToFile: content: "+content);
+        try (PrintWriter writer = new PrintWriter(file)) {
+            writer.write(content);
+        }
     }
     public static String getContentOfFile(String path) throws FileNotFoundException, IOException {
         File file = new File(PREFIX + path);

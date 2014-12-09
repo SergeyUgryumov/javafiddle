@@ -4,7 +4,7 @@
     <h:head>
         <title>JavaFiddle</title>
         
-        <h:outputScript library="js" name="jquery-2.1.0.min.js"/>
+        <script type="text/javascript" language="JavaScript" src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
         <h:outputScript library="js" name="jquery-ui.min.js"/>
         <h:outputScript library="js" name="jquery.layout.min.js"/>
         <h:outputScript library="js" name="moment.min.js"/>
@@ -105,7 +105,7 @@
                 </div>
                 <div id="header-top-right">
                      <h:panelGroup layout="block" id="username" >
-                        Logged in as <h:link value="#{userBean.profile.nickname}" outcome="index" />
+                         Logged in as <h:link value="guest" outcome="index" />
                     </h:panelGroup>
                     <!-- Log in -->
                     <div id="log_in" class="btn-group btn-group-sm">
@@ -193,7 +193,7 @@
                 PROJECTPARAM = "#{param['h']}"; 
                 
                 var editor = ace.edit("editor");
-                var console = ace.edit("console");
+                var jfconsole = ace.edit("console");
                 var outerLayout, innerLayout;
             //]]>
         </script>

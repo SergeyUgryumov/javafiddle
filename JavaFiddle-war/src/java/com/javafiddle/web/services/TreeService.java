@@ -6,19 +6,14 @@ import com.javafiddle.core.ejb.JFClassBean;
 import com.javafiddle.core.ejb.JFPackageBean;
 import com.javafiddle.core.ejb.JFProjectBean;
 import com.javafiddle.core.ejb.ProjectManager;
+import com.javafiddle.core.ejb.UserBean;
+import com.javafiddle.core.jpa.JFClass;
 import com.javafiddle.core.jpa.JFPackage;
 import com.javafiddle.core.jpa.JFProject;
-import com.javafiddle.revisions.Revisions;
 import com.javafiddle.web.services.sessiondata.ISessionData;
 import com.javafiddle.web.services.utils.Utility;
-import static com.javafiddle.web.tree.IdNodeType.FILE;
-import static com.javafiddle.web.tree.IdNodeType.PACKAGE;
-import static com.javafiddle.web.tree.IdNodeType.PROJECT;
 import com.javafiddle.web.tree.TreeFile;
-import com.javafiddle.web.tree.TreeNode;
-import com.javafiddle.web.tree.TreePackage;
-import com.javafiddle.web.tree.TreeProject;
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
@@ -54,6 +49,9 @@ public class TreeService {
     @EJB
     private JFClassBean classBean;
     
+    @EJB
+    private UserBean userBean;
+    
     @Inject
     private ISessionData sd;
     
@@ -64,10 +62,14 @@ public class TreeService {
             @Context HttpServletRequest request
             ) {
         String treeInJSON;
-        if(sd.getCurrentProjectId() == 0)
-            treeInJSON = Utility.addExampleTree();
+        if (sd.getUserId() == null)
+            sd.reset();
+        System.out.println("Current project: " + sd.getCurrentProjectId());
+        System.out.println("Current user: " + sd.getUserId());
+        if(sd.getCurrentProjectId() == 0L)
+            treeInJSON = pm.getExampleTree();
         else 
-            treeInJSON = pm.projectTreeToJSON(sd.getCurrentProjectId());
+            treeInJSON = pm.projectsOfUserToJSON(sd.getUserId());
         return Response.ok(treeInJSON, MediaType.APPLICATION_JSON).build();
     }
         
@@ -81,6 +83,10 @@ public class TreeService {
             ) {
         if (packageName == null || projectName == null)
             return Response.status(401).build();
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(projBean.addNewDefaultProject(sd.getUserId()));
+        }
         packBean.addPackage(projBean.getProjectByName(sd.getUserId(), projectName).getId(),
                 packageName);
         return Response.ok().build();
@@ -99,10 +105,14 @@ public class TreeService {
             ) {
         if (className == null || packageName == null || projectName == null || type == null)
             return Response.status(401).build();
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(projBean.addNewDefaultProject(sd.getUserId()));
+        }
         Long projId = projBean.getProjectByName(sd.getUserId(), projectName).getId();
         Long packId = packBean.getPackageByName(projId, packageName).getId();
-        classBean.addClass(className, null, packId);
-        Long newClassId = classBean.getClassByName(packId, className).getId();
+        Long time = (new Date()).getTime();
+        Long newClassId = classBean.addClass(className + ".java", "", packId, time).getId();
         
         Gson gson = new GsonBuilder().create();
         return Response.ok(gson.toJson(newClassId), MediaType.APPLICATION_JSON).build();
@@ -118,9 +128,26 @@ public class TreeService {
             ) {
         if (idString == null || name == null)
             return Response.status(401).build();
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(projBean.addNewDefaultProject(sd.getUserId()));
+        }
         
-        int id = Utility.parseId(idString);
-        classBean.renameClass(classBean.getClassById(Integer.toUnsignedLong(id)).getId(), name);
+        Long id = Utility.parseId(idString);
+        
+        //Had to do this dirty code, because idk how to make it better.
+        JFProject proj = this.projBean.getProjectById(id);
+        JFPackage pack = this.packBean.getPackageById(id);
+        JFClass clazz = this.classBean.getClassById(id);
+        if (proj == null && pack == null && clazz == null
+                || proj != null && pack != null && clazz == null
+                || proj != null && pack == null && clazz != null
+                || proj == null && pack != null && clazz != null) {
+            return Response.status(401).build();
+        }
+        if (proj != null) projBean.rename(id, name);
+        if (pack != null) packBean.rename(id, name);
+        if (clazz != null) classBean.rename(id, name);
         
         return Response.ok().build();
     }
@@ -134,9 +161,27 @@ public class TreeService {
             ) {
         if (idString == null)
             return Response.status(401).build();
+                if (sd.getUserId() == 0L) {
+        sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(projBean.addNewDefaultProject(sd.getUserId()));
+        }
         
-        int id = Utility.parseId(idString);
-        //Запилить после ответа Сереги.
+        Long id = Utility.parseId(idString);
+        
+        //Same thing. Had to copypast the shitcode. Sorry.
+        JFProject proj = this.projBean.getProjectById(id);
+        JFPackage pack = this.packBean.getPackageById(id);
+        JFClass clazz = this.classBean.getClassById(id);
+        if (proj == null && pack == null && clazz == null
+                || proj != null && pack != null && clazz == null
+                || proj != null && pack == null && clazz != null
+                || proj == null && pack != null && clazz != null) {
+            return Response.status(401).build();
+        }
+        if (proj != null) projBean.delete(id);
+        if (pack != null) packBean.delete(id);
+        if (clazz != null) classBean.delete(id);
+        
         return Response.ok().build();
     }
     
@@ -221,8 +266,12 @@ public class TreeService {
     public Response getProjectsList(
             @Context HttpServletRequest request
             ) {
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(projBean.addNewDefaultProject(sd.getUserId()));
+        }
         List<String> projects = pm.getNamesOfProjectsOfUser(sd.getUserId());
-        
+
         Gson gson = new GsonBuilder().create();
         return Response.ok(gson.toJson(projects), MediaType.APPLICATION_JSON).build();        
     }
@@ -233,6 +282,10 @@ public class TreeService {
             @Context HttpServletRequest request,
             @QueryParam("projectname") String projectname
             ) {
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(projBean.addNewDefaultProject(sd.getUserId()));
+        }
         JFProject project = projBean.getProjectByName(sd.getUserId(), projectname);
         if (project == null)
             return Response.status(Response.Status.BAD_REQUEST).build();
@@ -274,14 +327,15 @@ public class TreeService {
                 tf = new TreeFile("Shortcuts", "help"); 
                 break;
             default:
-                int id = Utility.parseId(idString);
-                tf = new TreeFile(classBean.getClassName(Integer.toUnsignedLong(id)),"runnable");
-                content = classBean.getClassContent(Integer.toUnsignedLong(id));
+                Long id = Utility.parseId(idString);
+                tf = new TreeFile(classBean.getClassName(id),"runnable");
+                content = classBean.getClassContent(id);
         }
         if (tf == null)
             return Response.status(410).build();
         
         Gson gson = new GsonBuilder().create();
+        System.out.println(gson.toJson(tf));
         return Response.ok(gson.toJson(tf), MediaType.APPLICATION_JSON).build();
     }
         
@@ -292,16 +346,31 @@ public class TreeService {
             @Context HttpServletRequest request,
             @QueryParam("id") String idString
             ) {
-//        if (idString == null)
-//            return Response.status(401).build();
-//        
-//        int id = Utility.parseId(idString);
-//        
-//        TreeNode tn = sd.getIdList().get(id);
-//        
-//        if (tn != null)
-//            return Response.ok("\"" + tn.getName() +"\"", MediaType.APPLICATION_JSON).build();
-//        else
+        if (idString == null)
+            return Response.status(401).build();
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(projBean.addNewDefaultProject(sd.getUserId()));
+        }
+        
+        Long id = Utility.parseId(idString);
+          
+        JFProject proj = this.projBean.getProjectById(id);
+        JFPackage pack = this.packBean.getPackageById(id);
+        JFClass clazz = this.classBean.getClassById(id);
+        String name;
+        if (proj == null && pack == null && clazz == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        if (proj != null && pack == null && clazz == null) {
+            return Response.ok("\"" + proj.getProjectName() +"\"", MediaType.APPLICATION_JSON).build();
+        }
+        if (proj == null && pack != null && clazz == null) {
+            return Response.ok("\"" + pack.getPackageName() +"\"", MediaType.APPLICATION_JSON).build();
+        }
+        if (proj == null && pack == null && clazz != null) {
+            return Response.ok("\"" + clazz.getClassName() +"\"", MediaType.APPLICATION_JSON).build();
+        }
+        return Response.status(Response.Status.BAD_REQUEST).build(); //Two are not nulls;
     }
 }

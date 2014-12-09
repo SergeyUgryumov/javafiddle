@@ -63,7 +63,7 @@ public class GitService {
     public Response add(
             @Context HttpServletRequest request,
             @FormParam("classId") String rawClassId){
-        Long classId = Integer.toUnsignedLong(Utility.parseId(rawClassId));
+        Long classId = Utility.parseId(rawClassId);
         User user = userBean.getUserById(sd.getUserId());
         GitHandler git = new GitHandler(user.getNickname(),user.getEmail(),
             pm.getPathForProject(sd.getCurrentProjectId()));

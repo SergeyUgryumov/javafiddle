@@ -9,7 +9,12 @@ import com.javafiddle.core.jpa.JFClass;
 import com.javafiddle.core.jpa.JFPackage;
 import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.core.jpa.User;
+import java.io.IOException;
+import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.ejb.LocalBean;
 import javax.inject.Named;
@@ -23,16 +28,23 @@ import javax.persistence.PersistenceContext;
 @Named(value = "projectBean")
 @Stateless
 @LocalBean
-public class JFProjectBean {
+public class JFProjectBean{
+    @EJB
+    private JFPackageBean packBean;
+    @EJB
+    private JFClassBean classBean;
+    @EJB
+    private ProjectManager pm;
     @PersistenceContext
     EntityManager em;
     
-    public void addNewProject(String projectName, Long userId) {
+    public JFProject addNewProject(String projectName, Long userId) {
         User user = em.find(User.class, userId);
         JFProject newProj = new JFProject();
         newProj.setUser(user);
         newProj.setProjectName(projectName);
         em.persist(newProj);
+        return this.getProjectByName(userId, projectName);
     }
     public JFProject getProjectById(Long projectId) {
         return em.find(JFProject.class, projectId);
@@ -41,7 +53,7 @@ public class JFProjectBean {
         User user = em.find(User.class, userId);
         return (JFProject) em.createQuery("select p from JFProject p "
                 + "where p.user =:user and p.projectName =:name")
-                .setParameter("pack", user)
+                .setParameter("user", user)
                 .setParameter("name", projectName)
                 .getSingleResult();
     }
@@ -49,12 +61,12 @@ public class JFProjectBean {
     public String getProjectName(Long projectId) {
         return this.getProjectById(projectId).getProjectName();
     }
-    public void renameProject(Long projectId, String newName) {
+    public void rename(Long projectId, String newName) {
         JFProject jpr = this.getProjectById(projectId);
         jpr.setProjectName(newName);
-        em.persist(newName);
+        em.persist(jpr);
     }
-    public void deleteProject(Long projectId) {
+    public void delete(Long projectId) {
         em.remove(this.getProjectById(projectId));
     }
     public List<Long> getPackagesOfProject(Long projectId) {
@@ -68,5 +80,20 @@ public class JFProjectBean {
         return em.createQuery("select p.packageName from JFPackage p where p.jfproject =:project")
                 .setParameter("project", proj)
                 .getResultList();
+    }
+    /**
+     * Creates new project with empty example class and adds it to the database.
+     * @param userId
+     * @return 
+     */
+    public Long addNewDefaultProject(Long userId) {
+        JFProject newProj = this.addNewProject("MyFirstProject", userId);
+        JFPackage newPack = packBean.addPackage(this.getProjectByName(userId, 
+                "MyFirstProject").getId(), "com.javafiddle.main");
+        
+        JFClass newClass = classBean.addClass("Main.java", "", 
+                packBean.getPackageByName(newProj.getId(), "com.javafiddle.main").getId(), 
+                (new Date()).getTime());
+        return newClass.getId();
     }
 }

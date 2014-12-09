@@ -40,6 +40,9 @@ public class JFClass implements Serializable {
     @JoinColumn(name = "jfpackage")
     private JFPackage jfpackage;
     
+    @Column (name = "save_time")
+    private Long lastSaveTime;
+    
     public Long getId() {
         return id;
     }
@@ -70,6 +73,14 @@ public class JFClass implements Serializable {
 
     public void setJFPackage(JFPackage jfpackage) {
         this.jfpackage = jfpackage;
+    }
+
+    public Long getLastSaveTime() {
+        return lastSaveTime;
+    }
+
+    public void setLastSaveTime(Long lastSaveTime) {
+        this.lastSaveTime = lastSaveTime;
     }
 
     @Override

@@ -467,6 +467,7 @@ function getPackagesList(projectname) {
         dataType: "json",
         async: false,
         success: function(data) {
+            console.log("Receied from server, list of packages: " + data);
             packagesList = data;
         }
     }); 

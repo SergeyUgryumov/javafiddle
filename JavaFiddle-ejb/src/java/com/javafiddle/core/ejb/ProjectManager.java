@@ -6,6 +6,7 @@ import com.javafiddle.core.jpa.JFPackage;
 import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.core.jpa.User;
 import java.io.File;
+import java.util.Date;
 import java.util.List;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -14,7 +15,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
 /**
- * Provides us with global methods for handling project tree.
+ * Provides us with global methods for handling projects.
  * @author roman
  */
 
@@ -29,6 +30,9 @@ public class ProjectManager {
     
     @EJB
     private JFClassBean jfclassBean;
+    
+    @EJB
+    private UserBean userBean;
     
     @PersistenceContext
     private EntityManager em;
@@ -92,19 +96,31 @@ public class ProjectManager {
         if (clazz == null) return null;
         StringBuilder sb = new StringBuilder();
         sb.append("\"id\": ").append(clazz.getId()).append(", \"name\": \"");
-        String className = clazz.getClassName().substring(0, clazz.getClassName().lastIndexOf("."));
-        String classType = clazz.getClassName().substring(clazz.getClassName().lastIndexOf(".")+1);
+        String className;
+        String classType;
+        if (clazz.getClassName().lastIndexOf(".") > 0) {
+            className = clazz.getClassName().substring(0, clazz.getClassName().lastIndexOf("."));
+            classType = clazz.getClassName().substring(clazz.getClassName().lastIndexOf(".")+1);
+        }
+        else {
+            className = clazz.getClassName();
+            classType = "";
+        }
         sb.append(className).append("\", \"type\": \"").append(classType).append("\"");
         return sb.toString();
     }
-    
+    /**
+     * Returns the full path for the class mentioned in arguments.
+     * @param classId
+     * @return 
+     */
     public String getPathForClass(Long classId) {
         JFClass clazz = jfclassBean.getClassById(classId);
         JFPackage pack = clazz.getJFPackage();
         JFProject proj = pack.getJFProject();
         User user = proj.getUser();
         String SEP = File.separator;
-        String path = user.getNickname() + SEP + proj.getProjectName() 
+        String path = user.getNickname() + SEP + proj.getProjectName() + SEP 
                 +"src" + SEP + "main" + SEP;
         path += PackageNameUtility.getPathFromPackage(pack.getPackageName());
         path += SEP;
@@ -127,5 +143,20 @@ public class ProjectManager {
         return em.createQuery("select p.projectName from JFProject p where p.user =:user")
                 .setParameter("user", em.find(User.class, userId))
                 .getResultList();
+    }
+    
+    public void generateData() {
+        String className, content;
+        for (Object packageId: em.createQuery("select p.id from JFPackage p")
+                .getResultList()) {
+            for (int i = 1; i <= 3; i++) {
+                className = "my_class_" + Integer.toString(i) + ".java";
+                content = "that is the content of class " + i + " in package " + packageId;
+                jfclassBean.addClass(className,content,(Long)packageId,(new Date()).getTime());
+            }
+        }
+    }
+    public String getExampleTree() {
+        return this.projectsOfUserToJSON(1L);
     }
 }

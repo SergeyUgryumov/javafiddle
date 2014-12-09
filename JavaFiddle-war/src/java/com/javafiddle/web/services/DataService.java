@@ -6,7 +6,9 @@ import com.javafiddle.core.ejb.JFClassBean;
 import com.javafiddle.core.ejb.JFPackageBean;
 import com.javafiddle.core.ejb.JFProjectBean;
 import com.javafiddle.core.ejb.ProjectManager;
+import com.javafiddle.core.ejb.UserBean;
 import com.javafiddle.core.jpa.JFClass;
+import com.javafiddle.core.jpa.JFPackage;
 import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.revisions.Revisions;
 import com.javafiddle.saving.FileSaver;
@@ -24,6 +26,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -67,6 +70,9 @@ public class DataService {
     
     @EJB
     JFClassBean jfclassBean;
+    
+    @EJB
+    UserBean userBean;
     /**
      * Returns the project with specified hash. "Project" is the tree of the 
      * project including all files. 
@@ -78,13 +84,10 @@ public class DataService {
             @Context HttpServletRequest request,
             @FormParam("projecthash") String hash
             ) {
-//        if (hash == null)
-//            return Response.status(401).build();
-//        
-//        GetProjectRevision gpr = new GetProjectRevision(hash);
-//        if (!gpr.treeExists())
-//            return Response.status(404).build();
-//        sd.resetData();
+        System.out.println("Data Service: hash: " + hash);
+        if (hash == null)
+            return Response.status(401).build();
+//        a();
 //        sd.setTree(gpr.getTree());
 //        sd.getIdList().putAll(sd.getTree().getIdList());
 //        ArrayList<TreeFile> filesList = new ArrayList<>();
@@ -111,7 +114,10 @@ public class DataService {
     public Response saveProject (
             @Context HttpServletRequest request
             ) {
-        //Pull all the data from the database to the 
+        //Pull all the data from the database to the filesystem.
+        if (sd.getCurrentProjectId() == 0) {
+            this.addNewGuestProjectToServer();
+        }
         JFProject proj = jfprojectBean.getProjectById(sd.getCurrentProjectId());
         for (Long packId: jfprojectBean.getPackagesOfProject(sd.getCurrentProjectId())) {
             for (Long classId: jfpackageBean.getClassesOfPackage(packId)) {
@@ -177,41 +183,36 @@ public class DataService {
     @GET
     @Path("file")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getFileRevision(
+    public Response getFileContent(
             @Context HttpServletRequest request,
             @QueryParam("id") String idString
-            ) {
-//        if (idString == null)
-//            return Response.status(401).build();
-//        
-//        FileRevision fr;
-//        String text;
-//        Gson gson = new GsonBuilder().create();
-//        switch(idString) {
-//            case "about_tab":
-//                text = GetProjectRevision.readFile(ISessionData.PREFIX + ISessionData.SEP + "static" + ISessionData.SEP + "about");
-//                fr = new FileRevision(new Date().getTime(), text);
-//                break;
-//            case "shortcuts_tab":
-//                text = GetProjectRevision.readFile(ISessionData.PREFIX + ISessionData.SEP + "static" + ISessionData.SEP + "shortcuts");
-//                fr = new FileRevision(new Date().getTime(), text);
-//                break;
-//            default:
-//                int id = Utility.parseId(idString);
-//                if (sd.getIdList().getFile(id) == null)
-//                    return Response.status(406).build();
-//                long time = sd.getIdList().getFile(id).getTimeStamp();
-//                if (time == 0) {
-//                    fr = new FileRevision(0, "");
-//                } else {   
-//                    text = sd.getFiles().get(id).get(time);
-//                    fr = new FileRevision(time, text);
-//                }  
-//                break;
-//        }
-//        
-//        return Response.ok(gson.toJson(fr), MediaType.APPLICATION_JSON).build();
-        return Response.ok().build();
+            ) throws IOException {
+        if (idString == null)
+            return Response.status(401).build();
+        
+        String text;
+        Long time = null;
+        Gson gson = new GsonBuilder().create();
+        switch(idString) {
+            case "about_tab":
+                text = FileSaver.getContentOfFile("static" + ISessionData.SEP + "about");
+                time = (new Date()).getTime();
+                break;
+            case "shortcuts_tab":
+                text = FileSaver.getContentOfFile("static" + ISessionData.SEP + "shortcuts");
+                time = (new Date()).getTime();
+                break;
+            default:
+                Long id = Utility.parseId(idString);
+                if (jfclassBean.getClassById(id) == null)
+                    return Response.status(406).build();
+                text = jfclassBean.getClassContent(id);
+                time = jfclassBean.getLastSaveTime(id);
+                break;
+        }
+        String jsonResult = "{\"value\":"+gson.toJson(text)+",\"time\":" + time.toString() + "}";
+        System.out.println("DataService: " + jsonResult);
+        return Response.ok(jsonResult, MediaType.APPLICATION_JSON).build();
     }
     //Finally I found a class that really uses Revisions class...
     /**
@@ -235,7 +236,7 @@ public class DataService {
         if (idString == null || timeStamp == 0 || value == null)
             return Response.status(401).build();
         
-        int addResult;
+        int addResult = 0;
         switch(idString) {
             case "about_tab":
                 addResult = 406;
@@ -244,8 +245,16 @@ public class DataService {
                 addResult = 406;
                 break;
             default:
-                Long id = Integer.toUnsignedLong(Utility.parseId(idString));
+                Long id = Utility.parseId(idString);
+                if (Objects.equals(id, ISessionData.defaultClassId)) { //example class from example tree
+                    System.out.println("DS: mess with new guest user");
+                    Long newUserId = userBean.addUser("guest", "", "guest@javafiddle.ru");
+                    sd.setUserId(newUserId);
+                    id = this.addNewGuestProjectToServer();
+                    addResult = 213;
+                }
                 JFClass clazz = this.jfclassBean.getClassById(id);
+                jfclassBean.updateContent(id, value);
                 //1 - get class'es path in the file system
                 String path = pm.getPathForClass(id);
                 //2 - get the content from the database
@@ -258,8 +267,32 @@ public class DataService {
                         Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
-                addResult = 200;
+                if (addResult != 213) 
+                    addResult = 200;
         }
-        return Response.status(addResult).build();
+        return Response.status(Response.Status.OK).build();
+    }
+    /**
+     * Returns the new id of the newly added class.
+     * <br/>
+     * @return 
+     */
+    public Long addNewGuestProjectToServer() {
+        //Here is all about the database
+       JFProject newProj = jfprojectBean.addNewProject("MyFirstProject", sd.getUserId());
+       sd.setCurrentProjectId(newProj.getId());
+       JFPackage newPack = jfpackageBean.addPackage(jfprojectBean.getProjectByName(sd.getUserId(), 
+               "MyFirstProject").getId(), "com.javafiddle.main");
+       JFClass newClass = jfclassBean.addClass("Main.java", "", 
+               jfpackageBean.getPackageByName(sd.getCurrentProjectId(), "com.javafiddle.main").getId(), 
+               (new Date()).getTime());
+       //here comes the file system.
+        try {
+            FileSaver.createFile(pm.getPathForClass(newClass.getId()));
+            FileSaver.writeToFile(pm.getPathForClass(newClass.getId()), newClass.getContent());
+        } catch (IOException ex) {
+            Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       return newClass.getId();
     }
 }
