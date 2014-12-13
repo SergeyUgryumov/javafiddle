@@ -2,18 +2,35 @@ package com.javafiddle.web.services;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.javafiddle.core.ejb.JFClassBean;
+import com.javafiddle.core.ejb.JFPackageBean;
+import com.javafiddle.core.ejb.JFProjectBean;
+import com.javafiddle.core.ejb.ProjectManager;
+import com.javafiddle.core.ejb.UserBean;
+import com.javafiddle.core.jpa.JFClass;
+import com.javafiddle.core.jpa.JFPackage;
+import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.revisions.Revisions;
+import com.javafiddle.saving.FileSaver;
 import com.javafiddle.saving.GetProjectRevision;
 import com.javafiddle.saving.ProjectRevisionSaver;
-import com.javafiddle.web.services.data.ISessionData;
+import com.javafiddle.web.services.sessiondata.ISessionData;
 import com.javafiddle.web.services.utils.FileRevision;
 import com.javafiddle.web.services.utils.Utility;
 import com.javafiddle.web.tree.Tree;
 import com.javafiddle.web.tree.TreeFile;
 import com.javafiddle.web.utils.SessionUtils;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Objects;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.ejb.EJB;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -42,6 +59,20 @@ public class DataService {
     @Inject
     private ISessionData sd;
     
+    @EJB
+    ProjectManager pm;
+    
+    @EJB
+    JFProjectBean jfprojectBean;
+    
+    @EJB
+    JFPackageBean jfpackageBean;
+    
+    @EJB
+    JFClassBean jfclassBean;
+    
+    @EJB
+    UserBean userBean;
     /**
      * Returns the project with specified hash. "Project" is the tree of the 
      * project including all files. 
@@ -53,54 +84,52 @@ public class DataService {
             @Context HttpServletRequest request,
             @FormParam("projecthash") String hash
             ) {
+        System.out.println("Data Service: hash: " + hash);
         if (hash == null)
             return Response.status(401).build();
-        
-        GetProjectRevision gpr = new GetProjectRevision(hash);
-        if (!gpr.treeExists())
-            return Response.status(404).build();
-        sd.resetData();
-        sd.setTree(gpr.getTree());
-        sd.getIdList().putAll(sd.getTree().getIdList());
-        ArrayList<TreeFile> filesList = new ArrayList<>();
-        filesList.addAll(sd.getIdList().getFileList().values());
-        for (TreeFile tf : filesList) {
-            int id = tf.getId();
-            long time = tf.getTimeStamp();
-            String text = gpr.getFile(sd.getIdList().getPackage(tf.getPackageId()).getName(), id, time);
-            TreeMap<Long, String> revisions = new TreeMap<>();
-            revisions.put(time, text);
-            sd.getFiles().put(id, revisions);
-        }
         return Response.ok().build();
     }
     
     /**
-     * Saves a revision to the disk and generates the hash of the revision. 
+     * Pulls the data from the database and saves it to the disk.<br/>
+     * Used to save a revision to the disk and generate the hash of the revision. 
      * @param request
      * @return 
      */
     @POST
     @Path("project")
-    public Response saveProjectRevision (
+    public Response saveProject (
             @Context HttpServletRequest request
             ) {
-        HttpSession session = SessionUtils.getSession(request, true);
-        Long currentUserId = SessionUtils.getUserId(session);
-        
-        // save project to disk
-        Date date = new Date();
-
-        ProjectRevisionSaver spr = new ProjectRevisionSaver(sd.getTree(), sd.getIdList(), sd.getFiles());			
-        spr.saveRevision();	
-        
-        String hash = sd.getTree().getHashes().getBranchHash() + sd.getTree().getHashes().getTreeHash();
-        
-        return Response.ok(hash, MediaType.TEXT_PLAIN).build();
+        //Pull all the data from the database to the filesystem.
+        System.out.println("DataService(105): " + sd.getUserId() + " " 
+                + sd.getCurrentProjectId());
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(jfprojectBean.addNewDefaultProject(sd.getUserId()));
+        }
+        for (Long packId: jfprojectBean.getPackagesOfProject(sd.getCurrentProjectId())) {
+            for (Long classId: jfpackageBean.getClassesOfPackage(packId)) {
+                try {
+                    String path = pm.getPathForClass(classId);
+                    String oldContent = FileSaver.getContentOfFile(path);
+                    String newContent = jfclassBean.getClassContent(classId);
+                    if (newContent.equals(oldContent)) 
+                        continue;
+                    FileSaver.writeToFile(path, newContent);
+                } catch (IOException ex) {
+                    Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+              
+        return Response.ok("STILL HAVE TO ADD THE FUCKING HASH FROM GIT", MediaType.TEXT_PLAIN).build();
     }
     
     /**
-     * Returns the hierarchy of the project basing on it's hash. 
+     * Still need to understand what this shit is. OK, got it, it goes to Git.
+     * <br/>Returns the hierarchy of the project basing on it's id in JSON format.
+     * <br/>Used to return the hierarchy of the project basing on it's hash. 
      * @param request
      * @return 
      */
@@ -110,19 +139,12 @@ public class DataService {
     public Response getTreeHierarchy( 
             @Context HttpServletRequest request
             ) {
-        GetProjectRevision gpr = new GetProjectRevision(sd.getTree().getHashes());
-        ArrayList<Tree> trees = gpr.findParents(sd.getTree());
-        if (trees == null)
-           return Response.ok().build();
-        ArrayList<String> names = new ArrayList<>();
-        for (Tree entry : trees)
-           names.add(sd.getTree().getHashes().getBranchHash() + entry.getHashes().getTreeHash());
-        Gson gson = new GsonBuilder().create();
-        return Response.ok(gson.toJson(names), MediaType.APPLICATION_JSON).build();
+        return Response.ok().build();
     }
            
     /**
-     * Returns wrapped into a Response object FileRevision object containing 
+     * It will be in the Git package.
+     * <br/>Returns wrapped into a Response object FileRevision object containing 
      * link to the file with the specified ID.<br/>
      * At least, I (RTur) understand it so.<br/>
      * Separately handles such idStrings as "about_tab" and "shortcuts_tab" for 
@@ -134,49 +156,47 @@ public class DataService {
     @GET
     @Path("file")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getFileRevision(
+    public Response getFileContent(
             @Context HttpServletRequest request,
             @QueryParam("id") String idString
-            ) {
+            ) throws IOException {
         if (idString == null)
             return Response.status(401).build();
         
-        FileRevision fr;
         String text;
+        Long time = null;
         Gson gson = new GsonBuilder().create();
         switch(idString) {
             case "about_tab":
-                text = GetProjectRevision.readFile(ISessionData.PREFIX + ISessionData.SEP + "static" + ISessionData.SEP + "about");
-                fr = new FileRevision(new Date().getTime(), text);
+                text = FileSaver.getContentOfFile("static" + ISessionData.SEP + "about");
+                time = (new Date()).getTime();
                 break;
             case "shortcuts_tab":
-                text = GetProjectRevision.readFile(ISessionData.PREFIX + ISessionData.SEP + "static" + ISessionData.SEP + "shortcuts");
-                fr = new FileRevision(new Date().getTime(), text);
+                text = FileSaver.getContentOfFile("static" + ISessionData.SEP + "shortcuts");
+                time = (new Date()).getTime();
                 break;
             default:
-                int id = Utility.parseId(idString);
-                if (sd.getIdList().getFile(id) == null)
+                Long id = Utility.parseId(idString);
+                if (jfclassBean.getClassById(id) == null)
                     return Response.status(406).build();
-                long time = sd.getIdList().getFile(id).getTimeStamp();
-                if (time == 0) {
-                    fr = new FileRevision(0, "");
-                } else {   
-                    text = sd.getFiles().get(id).get(time);
-                    fr = new FileRevision(time, text);
-                }  
+                text = jfclassBean.getClassContent(id);
+                time = jfclassBean.getLastSaveTime(id);
                 break;
         }
-        
-        return Response.ok(gson.toJson(fr), MediaType.APPLICATION_JSON).build();
+        //A replacement code for JSON-modification of the class'es fields.
+        String jsonResult = "{\"value\":"+gson.toJson(text)+",\"time\":" + time.toString() + "}";
+        return Response.ok(jsonResult, MediaType.APPLICATION_JSON).build();
     }
-    //Finally I found a class that really uses Revisions class...
     /**
-     * Adds current revision into the system.
+     * Saves one single file to the disk.
+     * <br/>Used to add current revision into the system.
      * @param request
      * @param idString
      * @param timeStamp
      * @param value
      * @return 
+     * @throws java.io.FileNotFoundException 
+     * @throws java.io.UnsupportedEncodingException 
      */
     @POST
     @Path("file")
@@ -186,11 +206,12 @@ public class DataService {
             @FormParam("id") String idString,
             @FormParam("timeStamp") long timeStamp,
             @FormParam("value") String value
-            ) {
+            ) throws FileNotFoundException, UnsupportedEncodingException {
         if (idString == null || timeStamp == 0 || value == null)
             return Response.status(401).build();
         
-        int addResult;
+        int addResult = 0;
+        Long id;
         switch(idString) {
             case "about_tab":
                 addResult = 406;
@@ -199,10 +220,63 @@ public class DataService {
                 addResult = 406;
                 break;
             default:
-                int id = Utility.parseId(idString);
-                Revisions revisions = new Revisions(sd.getIdList(), sd.getFiles());
-                addResult = revisions.addFileRevision(id, timeStamp, value);
+                id = Utility.parseId(idString);
+                System.out.println("DataService(223):" + sd.getUserId() 
+                        + " " + sd.getCurrentProjectId());
+                if (Objects.equals(id, ISessionData.defaultClassId)) { //example class from example tree
+                    Long newUserId = userBean.addNewGuestUser();
+                    sd.setUserId(newUserId);
+                    Long projId = jfprojectBean.addNewDefaultProject(newUserId);
+                    sd.setCurrentProjectId(projId);
+                    id = jfclassBean.getClassByName(jfpackageBean.getPackageByName(
+                            sd.getCurrentProjectId(), 
+                            ISessionData.defaultPackageName).getId(),
+                            "Main.java").getId();
+                    addResult = 201;
+                }
+                System.out.println("DataService(232):" + sd.getUserId() 
+                        + " " + sd.getCurrentProjectId());
+                JFClass clazz = this.jfclassBean.getClassById(id);
+                jfclassBean.updateContent(id, value);
+                String path = pm.getPathForClass(id);
+                String newContent = jfclassBean.getClassById(id).getContent();
+                {
+                    try {
+                        //3 - save it to the file system
+                        FileSaver.writeToFile(path, newContent);
+                    } catch (IOException ex) {
+                        Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+                if (addResult != 213) 
+                    addResult = 200;
         }
-        return Response.status(addResult == 304 ? 200 : addResult).build();
+        switch(addResult) {
+            case 406: return Response.status(Response.Status.BAD_REQUEST).build();
+            case 200: default: return Response.status(Response.Status.OK).build();
+        }
+    }
+    /**
+     * Returns the new id of the newly added class.
+     * <br/>
+     * @return 
+     */
+    public Long addNewGuestProjectToServer() {
+        //Here is all about the database
+        JFProject newProj = jfprojectBean.addNewProject("MyFirstProject", sd.getUserId());
+        sd.setCurrentProjectId(newProj.getId());
+        JFPackage newPack = jfpackageBean.addPackage(jfprojectBean.getProjectByName(sd.getUserId(), 
+                "MyFirstProject").getId(), "com.javafiddle.main");
+        JFClass newClass = jfclassBean.addClass("Main.java", "", 
+                newPack.getId(), 
+                (new Date()).getTime());
+       //here comes the file system.
+        try {
+            FileSaver.createFile(pm.getPathForClass(newClass.getId()));
+            FileSaver.writeToFile(pm.getPathForClass(newClass.getId()), newClass.getContent());
+        } catch (IOException ex) {
+            Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
+        }
+       return newClass.getId();
     }
 }

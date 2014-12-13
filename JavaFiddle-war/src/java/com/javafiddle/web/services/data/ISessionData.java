@@ -25,4 +25,5 @@ public interface ISessionData extends Serializable {
     public TreeMap<Integer, TreeMap<Long, String>> getFiles();
 
     public void setFiles(TreeMap<Integer, TreeMap<Long, String>> files);
+    
 }

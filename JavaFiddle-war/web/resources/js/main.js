@@ -67,7 +67,7 @@ function resizeEditor() {
     $("#editor").height($("#block-editor").height());
     $("#console").height($("#console-wrapper").height());
     editor.resize();
-    console.resize();
+    jfconsole.resize();
 }
 
 
@@ -114,16 +114,16 @@ function editorSettings() {
         pushModifiedTab();
     });
 
-    console.setTheme("ace/theme/idea");
-    console.getSession().setMode("ace/mode/text");
-    console.renderer.setShowGutter(false); 
-    console.renderer.setShowPrintMargin(false);
-    console.setReadOnly(true); 
+    jfconsole.setTheme("ace/theme/idea");
+    jfconsole.getSession().setMode("ace/mode/text");
+    jfconsole.renderer.setShowGutter(false); 
+    jfconsole.renderer.setShowPrintMargin(false);
+    jfconsole.setReadOnly(true); 
 }
 
 // TABS
 
-function loadTabs() {
+function loadTabs() {    
     var opened = getCurrentFileID();
     openedTabs().forEach(function(entry) {
         var file = getFileDataById(entry);
@@ -430,6 +430,8 @@ function toggleConsole() {
 // FILE REVISIONS (SERVICES)
 //
 function saveFile(id) {
+    console.log("Saving file " + id);
+   
     if(arguments.length === 0) {
         id = getCurrentFileID();
         addCurrentFileText();
@@ -440,8 +442,18 @@ function saveFile(id) {
     $.ajax({
         url: PATH + '/webapi/data/file',
         type:'POST', 
+        async: false,
         data: {id: id, timeStamp: time, value: getOpenedFileText(id)},
-        success: function() {
+        success: function(data) {
+            if (id === "node_4_tab") {
+                sessionStorage.clear();
+                buildTree();
+                closeAllTabs();
+                id = addDefaultFileToGit();
+                console.log("Default File addition worked: " + id);
+                selectTab(addTabToPanel("node_" + id + "_tab","Main", "java active"));
+                console.log("New tree has been built");
+            }
             unModifiedTab(id);
             addCurrentFileTimeStamp(time);
             if (isCurrent(id))
@@ -472,14 +484,16 @@ function saveProject() {
     $.ajax({
         url: PATH + '/webapi/data/project',
         type:'POST', 
+        async: false,
         contentType: "application/json",
         success: function(data) {
-            $('#latest_update').text("Project saved with hash: " + data);
+            $('#latest_update').text("Project successfully saved to the disk.");
         },
         error: function() {
             $('#latest_update').text("Project hasn't been saved.");
         }
     });
+    console.log("saveProject() completed");
 }
 
 function openProjectByHash(projecthash) {
@@ -502,7 +516,7 @@ function openProjectByHash(projecthash) {
     });
 }
 
-function getFileRevision(id) {
+function getFileContent(id) {
     if(arguments.length === 0)
         id = getCurrentFileID();
     $.ajax({
@@ -517,7 +531,7 @@ function getFileRevision(id) {
             editor.clearSelection();
             editor.session.getUndoManager().reset();
             editor.setReadOnly(false);
-            addCurrentFileTimeStamp(data.timeStamp);
+            addCurrentFileTimeStamp(data.time); //TO BE REDONE
             changeModifiedState(id, false);
         },
         error: function(jqXHR) {
@@ -612,7 +626,7 @@ function poll() {
                             result = 0;
                             return;
                         }
-                        console.insert(entry + "\n");
+                        jfconsole.insert(entry + "\n");
                     }
                 });
             if (result === 1)
@@ -630,7 +644,7 @@ function sendInput() {
         data: {input: input},
         success: function() {
             $("#stdin").val("");
-            console.insert("> " + entry + "\n");
+            jfconsole.insert("> " + entry + "\n");
         }
     }); 
     return false;

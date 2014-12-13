@@ -254,6 +254,7 @@ function addFile() {
     }
     
     if(isRightClassName(className, packName, projectName)) {
+        var id;
         $.ajax({
             url: PATH + '/webapi/tree/addFile',
             type: 'POST',
@@ -266,10 +267,23 @@ function addFile() {
             contentType: "application/x-www-form-urlencoded",
             success: function(data) {
                 var li = addTabToPanel("node_" + data + "_tab", (className.endsWith(".java") ? className  : className + ".java"), classType);
+                id = "node_" + data + "_tab";
                 selectTab(li);
                 buildTree();
+                $.ajax({
+                    url: PATH + '/webapi/git/add',
+                    type: 'POST',
+                    data: {classId: id},
+                    success: function(data) {
+                        console.log("Successfully added " + id + " to git.");
+                    },
+                    error: function(data) {
+                        console.log("Failed to add " + id + " to git.");
+                    }
+                });
+                
             }
-        });  
+        });
         return true;
     }
     return false;
@@ -467,6 +481,7 @@ function getPackagesList(projectname) {
         dataType: "json",
         async: false,
         success: function(data) {
+            console.log("Receied from server, list of packages: " + data);
             packagesList = data;
         }
     }); 

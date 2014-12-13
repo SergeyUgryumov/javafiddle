@@ -29,6 +29,7 @@ public class ApplicationConfig extends Application {
      */
     private void addRestResourceClasses(Set<Class<?>> resources) {
         resources.add(com.javafiddle.web.services.DataService.class);
+        resources.add(com.javafiddle.web.services.GitService.class);
         resources.add(com.javafiddle.web.services.RunService.class);
         resources.add(com.javafiddle.web.services.TreeService.class);
     }

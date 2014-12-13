@@ -4,7 +4,7 @@
     <h:head>
         <title>JavaFiddle</title>
         
-        <h:outputScript library="js" name="jquery-2.1.0.min.js"/>
+        <script type="text/javascript" language="JavaScript" src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
         <h:outputScript library="js" name="jquery-ui.min.js"/>
         <h:outputScript library="js" name="jquery.layout.min.js"/>
         <h:outputScript library="js" name="moment.min.js"/>
@@ -16,6 +16,7 @@
         <h:outputScript library="ace" name="theme-idea.js"/>
  
         <h:outputScript library="js" name="main.js"/>
+        <h:outputScript library="js" name="git.js"/>
         <h:outputScript library="js" name="modal.js"/>
         <h:outputScript library="js" name="sessionstorage.js"/>
         
@@ -84,6 +85,13 @@
                                 </ul>
                             </li>
                             <li class="dropdown">
+                                <a id="dropdown-history" class="dropdown-toggle" data-toggle="dropdown" href="#">Git</a>
+                                <ul class="dropdown-menu" role="menu" aria-labelledby="dropdown-history">
+                                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="gitCommit('Testing commit')">Commit</a></li>
+                                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="">Show History</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
                                 <a id="dropdown-help" class="dropdown-toggle" data-toggle="dropdown" href="#">Help</a>
                                 <ul class="dropdown-menu" role="menu" aria-labelledby="dropdown-help">
                                     <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="openStaticTab('shortcuts');">Shortcuts</a></li>
@@ -96,8 +104,21 @@
                 </div>
                 <div id="header-top-right">
                      <h:panelGroup layout="block" id="username" >
-                        Logged in as <h:link value="#{userBean.profile.nickname}" outcome="index" />
+                         Logged in as <h:link value="#{curUserBean.curUserName}" outcome="index" />
                     </h:panelGroup>
+                    <!-- Log in -->
+                    <div id="log_in" class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-primary" onclick="$('#modal-log_in').modal('show');">
+                            <span class="glyphicon glyphicon-log_in-alt"/> Log in
+                        </button>
+                    </div>
+                    <!-- Registration -->
+                    <div id="registration" class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-primary" onclick="$('#modal-registration').modal('show');">
+                            <span class="glyphicon glyphicon-registration-alt"/> Registration
+                        </button>
+                    </div>
+                    <!-- Share -->
                     <div id="share" class="btn-group btn-group-sm">
                         <button type="button" class="btn btn-primary" onclick="$('#modal-share').modal('show');">
                             <span class="glyphicon glyphicon-share-alt"/> Share Code...
@@ -171,7 +192,7 @@
                 PROJECTPARAM = "#{param['h']}"; 
                 
                 var editor = ace.edit("editor");
-                var console = ace.edit("console");
+                var jfconsole = ace.edit("console");
                 var outerLayout, innerLayout;
             //]]>
         </script>
@@ -355,7 +376,81 @@
                 </div>
             </div>
         </div>
-                
+        
+        <!-- Modal log_in --> 
+        <div class="modal fade" id="modal-log_in" tabindex="-1" role="dialog" aria-labelledby="modal-log_in-header" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <h:form>
+                        <h:messages errorClass="alert alert-danger" id="loginErrors"/>
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-log_in-header" id="myModalLabel">Log in...</h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                              <label for="modal-log_in-login">Login:</label>
+                              <!-- <input id="modal-log_in-login" type="text" class="form-control enter-active" /> -->
+                              <br></br>
+                              <h:inputText value="#{loginBean.nickname}"></h:inputText>
+                              <br></br>
+                              <label for="modal-log_in-password">Password:</label>
+                              <br></br>
+                              <!-- <input id="modal-log_in-password" type="text" class="form-control enter-active" /> -->
+                              <h:inputSecret value="#{loginBean.password}"></h:inputSecret>
+                              <p id ="modal-log_in-verify"></p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <!-- <button id="modal-log_in-ok" type="button" class="btn btn-primary" data-dismiss="modal">Ok</button> -->
+                            <!-- <h:commandButton action="index" value="submit"></h:commandButton> -->
+                            <h:commandLink class="btn btn-primary" value="Log in" actionListener="#{loginBean.login}"> </h:commandLink>
+                        </div>
+                    </h:form>
+                </div>
+            </div>
+        </div>
+ 
+        <!-- Modal registration --> 
+        <div class="modal fade" id="modal-registration" tabindex="-1" role="dialog" aria-labelledby="modal-registration-header" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <h:form>
+                        <h:messages errorClass="alert alert-danger" id="registerErrors"/>
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-registration-header" id="myModalLabel">Registration...</h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                              <label for="modal-registration-login">Login:</label>
+                              <!-- <input id="modal-registration-login" type="text" class="form-control enter-active" /> -->
+                              <br></br>
+                              <h:inputText value="#{registrationBean.nickname}"></h:inputText>
+                              <br></br>
+                              <label for="modal-registration-email">Email:</label>
+                              <!-- <input id="modal-registration-email" type="text" class="form-control enter-active" /> -->
+                              <br></br>
+                              <h:inputText value="#{registrationBean.email}"></h:inputText>
+                              <br></br>
+                              <label for="modal-registration-password">Password:</label >
+                              <br></br>
+                              <!--<input id="modal-registration-password" type="text" class="form-control enter-active" onkeyup="m_newfile_updname();" /> -->
+                              <h:inputSecret value="#{registrationBean.password}"></h:inputSecret>
+                              <p id ="modal-registration-verify"></p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <!-- <button id="modal-registration-ok" type="button" class="btn btn-primary" data-dismiss="modal" onclick="registration();">Ok</button> -->
+                            <h:commandLink class="btn btn-primary" value="Log in" actionListener="#{registrationBean.addNewUser}"> </h:commandLink>
+                        </div>
+                    </h:form>
+                </div>
+            </div>
+        </div>
+        
         <!-- Modal share --> 
         <div class="modal fade" id="modal-share" tabindex="-1" role="dialog" aria-labelledby="modal-share-header" aria-hidden="true">
             <div class="modal-dialog">
@@ -378,7 +473,7 @@
             </div>
         </div>
         
-        <!-- Modal commit's list -->
+       <!-- Modal commit's list -->
         <div class="modal flat" id="modal-revisions" tabindex="-1" role="dialog" aria-labelledby="modal-revisions-header" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -398,6 +493,6 @@
                    </div>
                 </div>
             </div>
-        </div>     
+        </div>   
     </h:body>
 </html>
