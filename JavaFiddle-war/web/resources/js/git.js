@@ -1,63 +1,60 @@
 /**
- * Send the specified file to the server.
- * @param {type} id
+ * Make the commit with the specified message.
+ * @param {String} message - commit message
  * @returns {undefined}
  */
-function gitSaveFile(id) {
-    if(arguments.length === 0) {
-        id = getCurrentFileID();
-        addCurrentFileText();
-        $('#latest_update').text("Saving...");
-    }
-    
-    var time = new Date().getTime();
+function gitCommit(message) {
+    saveProject();
     $.ajax({
-        url: PATH + '/webapi/git/file',
-        type:'POST', 
-        data: {id: id, timeStamp: time, value: getOpenedFileText(id)},
-        success: function() {
-            unModifiedTab(id);
-            addCurrentFileTimeStamp(time);
-            if (isCurrent(id))
-                $('#latest_update').text("All changes saved.");
+        url: PATH + "/webapi/git/commit",
+        type: 'POST',
+        async: false,
+        data: {'commitMessage': message},
+        success: function(data) { //Supposed to return the hash of the commited project.
+            console.log('Successfully passed through /webapi/git/commit');
+            $('#latest_update').text('Project commited with hash ' + data);
         },
-        error: function(jqXHR) {
-            if (jqXHR.status === 406)
-                $('#latest_update').text("Saving isn't acceptable.");
+        error: function(data) {
+            $('#latest_update').text('Failed to commit');
         }
-    });
+    })
 }
-/**
- * Saves all changed files. 
- * @returns {undefined}
- */
-function gitSaveAllFiles() {
-    addCurrentFileText();
-    $('#latest_update').text("Saving...");
-    modifiedList().forEach(function(entry) {
-        gitSaveFile(entry);
-    });
-    $('#latest_update').text("All files saved");
-}
+
 /**
  * Sends a new object to the server
+ * @param id {String} id of the file we will add now
  */
-function gitAddObject() {
+function gitAddFile(id) {
+    saveFile(id);
     
-}
-// rename objects and do 'git-delete and git-add' commands
-function gitRenameObject() {
-    
-}
-// delete an existing object
-function gitDeleteObject() {
-    
+    $.ajax({
+        URL: PATH + 'webapi/git/add',
+        type: 'POST',
+        data: {'classId':id},
+        success: function(data) {
+        },
+        error: {
+        }
+    })
 }
 // get the returned string from git-status
 function gitGetStatus() {
     
 }
-// send the commit command
-function gitCommit(message) {
-    
+
+function addDefaultFileToGit() {
+    var id
+    $.ajax({
+        url: PATH + '/webapi/git/addDefaultClass',
+        type: 'POST',
+        async: false,
+        success: function(data) {
+            console.log("addDefaultFile: " + data);
+            id = data;
+        },
+        error: function() {
+            console.log("Failed to add default class to git");
+        }
+    })
+    return id;
 }

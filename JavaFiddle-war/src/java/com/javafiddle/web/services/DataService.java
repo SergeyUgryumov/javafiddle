@@ -87,19 +87,6 @@ public class DataService {
         System.out.println("Data Service: hash: " + hash);
         if (hash == null)
             return Response.status(401).build();
-//        a();
-//        sd.setTree(gpr.getTree());
-//        sd.getIdList().putAll(sd.getTree().getIdList());
-//        ArrayList<TreeFile> filesList = new ArrayList<>();
-//        filesList.addAll(sd.getIdList().getFileList().values());
-//        for (TreeFile tf : filesList) {
-//            int id = tf.getId();
-//            long time = tf.getTimeStamp();
-//            String text = gpr.getFile(sd.getIdList().getPackage(tf.getPackageId()).getName(), id, time);
-//            TreeMap<Long, String> revisions = new TreeMap<>();
-//            revisions.put(time, text);
-//            sd.getFiles().put(id, revisions);
-//        }
         return Response.ok().build();
     }
     
@@ -115,23 +102,20 @@ public class DataService {
             @Context HttpServletRequest request
             ) {
         //Pull all the data from the database to the filesystem.
-        if (sd.getCurrentProjectId() == 0) {
-            this.addNewGuestProjectToServer();
+        System.out.println("DataService(105): " + sd.getUserId() + " " 
+                + sd.getCurrentProjectId());
+        if (sd.getUserId() == 0L) {
+            sd.setUserId(userBean.addNewGuestUser());
+            sd.setCurrentProjectId(jfprojectBean.addNewDefaultProject(sd.getUserId()));
         }
-        JFProject proj = jfprojectBean.getProjectById(sd.getCurrentProjectId());
         for (Long packId: jfprojectBean.getPackagesOfProject(sd.getCurrentProjectId())) {
             for (Long classId: jfpackageBean.getClassesOfPackage(packId)) {
                 try {
-                    //1 - get file's path
                     String path = pm.getPathForClass(classId);
-                    //2 - get the content of the file
                     String oldContent = FileSaver.getContentOfFile(path);
-                    //3 - get the content from the db
                     String newContent = jfclassBean.getClassContent(classId);
-                    //4 - compare
                     if (newContent.equals(oldContent)) 
                         continue;
-                    //5 - if smth is different - overwrite it
                     FileSaver.writeToFile(path, newContent);
                 } catch (IOException ex) {
                     Logger.getLogger(DataService.class.getName()).log(Level.SEVERE, null, ex);
@@ -155,17 +139,6 @@ public class DataService {
     public Response getTreeHierarchy( 
             @Context HttpServletRequest request
             ) {
-        
-        //To be implemented by git
-        
-//        GetProjectRevision gpr = new GetProjectRevision(sd.getTree().getHashes());
-//        ArrayList<Tree> trees = gpr.findParents(sd.getTree());
-//        if (trees == null)
-//           return Response.ok().build();
-//        ArrayList<String> names = new ArrayList<>();
-//        for (Tree entry : trees)
-//           names.add(sd.getTree().getHashes().getBranchHash() + entry.getHashes().getTreeHash());
-//        Gson gson = new GsonBuilder().create();
         return Response.ok().build();
     }
            
@@ -210,11 +183,10 @@ public class DataService {
                 time = jfclassBean.getLastSaveTime(id);
                 break;
         }
+        //A replacement code for JSON-modification of the class'es fields.
         String jsonResult = "{\"value\":"+gson.toJson(text)+",\"time\":" + time.toString() + "}";
-        System.out.println("DataService: " + jsonResult);
         return Response.ok(jsonResult, MediaType.APPLICATION_JSON).build();
     }
-    //Finally I found a class that really uses Revisions class...
     /**
      * Saves one single file to the disk.
      * <br/>Used to add current revision into the system.
@@ -223,6 +195,8 @@ public class DataService {
      * @param timeStamp
      * @param value
      * @return 
+     * @throws java.io.FileNotFoundException 
+     * @throws java.io.UnsupportedEncodingException 
      */
     @POST
     @Path("file")
@@ -237,6 +211,7 @@ public class DataService {
             return Response.status(401).build();
         
         int addResult = 0;
+        Long id;
         switch(idString) {
             case "about_tab":
                 addResult = 406;
@@ -245,19 +220,25 @@ public class DataService {
                 addResult = 406;
                 break;
             default:
-                Long id = Utility.parseId(idString);
+                id = Utility.parseId(idString);
+                System.out.println("DataService(223):" + sd.getUserId() 
+                        + " " + sd.getCurrentProjectId());
                 if (Objects.equals(id, ISessionData.defaultClassId)) { //example class from example tree
-                    System.out.println("DS: mess with new guest user");
-                    Long newUserId = userBean.addUser("guest", "", "guest@javafiddle.ru");
+                    Long newUserId = userBean.addNewGuestUser();
                     sd.setUserId(newUserId);
-                    id = this.addNewGuestProjectToServer();
-                    addResult = 213;
+                    Long projId = jfprojectBean.addNewDefaultProject(newUserId);
+                    sd.setCurrentProjectId(projId);
+                    id = jfclassBean.getClassByName(jfpackageBean.getPackageByName(
+                            sd.getCurrentProjectId(), 
+                            ISessionData.defaultPackageName).getId(),
+                            "Main.java").getId();
+                    addResult = 201;
                 }
+                System.out.println("DataService(232):" + sd.getUserId() 
+                        + " " + sd.getCurrentProjectId());
                 JFClass clazz = this.jfclassBean.getClassById(id);
                 jfclassBean.updateContent(id, value);
-                //1 - get class'es path in the file system
                 String path = pm.getPathForClass(id);
-                //2 - get the content from the database
                 String newContent = jfclassBean.getClassById(id).getContent();
                 {
                     try {
@@ -270,7 +251,10 @@ public class DataService {
                 if (addResult != 213) 
                     addResult = 200;
         }
-        return Response.status(Response.Status.OK).build();
+        switch(addResult) {
+            case 406: return Response.status(Response.Status.BAD_REQUEST).build();
+            case 200: default: return Response.status(Response.Status.OK).build();
+        }
     }
     /**
      * Returns the new id of the newly added class.
@@ -279,13 +263,13 @@ public class DataService {
      */
     public Long addNewGuestProjectToServer() {
         //Here is all about the database
-       JFProject newProj = jfprojectBean.addNewProject("MyFirstProject", sd.getUserId());
-       sd.setCurrentProjectId(newProj.getId());
-       JFPackage newPack = jfpackageBean.addPackage(jfprojectBean.getProjectByName(sd.getUserId(), 
-               "MyFirstProject").getId(), "com.javafiddle.main");
-       JFClass newClass = jfclassBean.addClass("Main.java", "", 
-               jfpackageBean.getPackageByName(sd.getCurrentProjectId(), "com.javafiddle.main").getId(), 
-               (new Date()).getTime());
+        JFProject newProj = jfprojectBean.addNewProject("MyFirstProject", sd.getUserId());
+        sd.setCurrentProjectId(newProj.getId());
+        JFPackage newPack = jfpackageBean.addPackage(jfprojectBean.getProjectByName(sd.getUserId(), 
+                "MyFirstProject").getId(), "com.javafiddle.main");
+        JFClass newClass = jfclassBean.addClass("Main.java", "", 
+                newPack.getId(), 
+                (new Date()).getTime());
        //here comes the file system.
         try {
             FileSaver.createFile(pm.getPathForClass(newClass.getId()));

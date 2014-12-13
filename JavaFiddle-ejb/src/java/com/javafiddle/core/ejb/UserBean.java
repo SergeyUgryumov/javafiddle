@@ -44,10 +44,8 @@ public class UserBean {
         if (name.equals("guest")) {
             String newName = "guest" + File.separator + this.generateRandomSuffix();
             user.setNickname(newName);
-            System.out.println("UserBean.addUser():guest:" +user.toString());
             em.persist(user);
             user = this.getUserByUsername(newName);
-            System.out.println("UserBean.addUser():guest:" +user.toString());
             em.remove(user);
             user.setNickname("guest" + File.separator +user.getId());
             em.persist(user);
@@ -67,7 +65,7 @@ public class UserBean {
     }
     
     public Long addNewGuestUser() {
-        return this.addUser("guest", null, "guest@javafiddle.org");
+        return this.addUser("guest", "", "guest@javafiddle.org");
     }
     
     private String generateRandomSuffix() {

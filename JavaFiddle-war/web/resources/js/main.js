@@ -123,7 +123,7 @@ function editorSettings() {
 
 // TABS
 
-function loadTabs() {
+function loadTabs() {    
     var opened = getCurrentFileID();
     openedTabs().forEach(function(entry) {
         var file = getFileDataById(entry);
@@ -430,6 +430,7 @@ function toggleConsole() {
 // FILE REVISIONS (SERVICES)
 //
 function saveFile(id) {
+    console.log("Saving file " + id);
    
     if(arguments.length === 0) {
         id = getCurrentFileID();
@@ -441,13 +442,17 @@ function saveFile(id) {
     $.ajax({
         url: PATH + '/webapi/data/file',
         type:'POST', 
+        async: false,
         data: {id: id, timeStamp: time, value: getOpenedFileText(id)},
         success: function(data) {
-            console.log(true);
             if (id === "node_4_tab") {
                 sessionStorage.clear();
                 buildTree();
-                console.log("new tree has been built");
+                closeAllTabs();
+                id = addDefaultFileToGit();
+                console.log("Default File addition worked: " + id);
+                selectTab(addTabToPanel("node_" + id + "_tab","Main", "java active"));
+                console.log("New tree has been built");
             }
             unModifiedTab(id);
             addCurrentFileTimeStamp(time);
@@ -479,14 +484,16 @@ function saveProject() {
     $.ajax({
         url: PATH + '/webapi/data/project',
         type:'POST', 
+        async: false,
         contentType: "application/json",
         success: function(data) {
-            $('#latest_update').text("Project saved with hash: " + data);
+            $('#latest_update').text("Project successfully saved to the disk.");
         },
         error: function() {
             $('#latest_update').text("Project hasn't been saved.");
         }
     });
+    console.log("saveProject() completed");
 }
 
 function openProjectByHash(projecthash) {

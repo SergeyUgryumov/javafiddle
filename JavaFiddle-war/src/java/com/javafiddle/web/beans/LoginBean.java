@@ -2,8 +2,10 @@ package com.javafiddle.web.beans;
 
 import com.javafiddle.core.jpa.User;
 import com.javafiddle.core.ejb.LoginBeanLocal;
+import com.javafiddle.core.ejb.UserBean;
 import com.javafiddle.core.ejb.UserManagerLocal;
 import java.io.Serializable;
+import javax.ejb.EJB;
 import javax.enterprise.context.SessionScoped;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.NavigationHandler;
@@ -20,6 +22,10 @@ import javax.inject.Named;
 public class LoginBean implements Serializable{
     @Inject
     private LoginBeanLocal ejbLoginBean;
+    @Inject
+    private CurUserBean curUserBean;
+    @EJB
+    private UserBean userBean;
     /**
      * Creates a new instance of LoginBean
      */
@@ -43,12 +49,14 @@ public class LoginBean implements Serializable{
         if (!error){
             this.user = ejbLoginBean.performLogin(nickname, password);
             if (this.user != null){               
-              FacesContext fc = FacesContext.getCurrentInstance();
-  NavigationHandler nh = fc.getApplication().getNavigationHandler();
-  nh.handleNavigation(fc, null, "profile?faces-redirect=true");   
-            //context.addMessage("loginErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "GOOOD", "good"));
+                this.curUserBean.setCurUserName(this.user.getNickname());
+                this.curUserBean.setCurUserId(userBean.getUserByUsername(this.user.getNickname()).getId());
             }
-            else context.addMessage("loginErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "incorrect username or password", "incorrect username or password"));
+            else {
+                context.addMessage("loginErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, 
+                        "incorrect username or password", 
+                        "incorrect username or password")); //It's a magic yo!
+            }
         }
     }
  

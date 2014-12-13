@@ -88,12 +88,9 @@ public class JFProjectBean{
      */
     public Long addNewDefaultProject(Long userId) {
         JFProject newProj = this.addNewProject("MyFirstProject", userId);
-        JFPackage newPack = packBean.addPackage(this.getProjectByName(userId, 
-                "MyFirstProject").getId(), "com.javafiddle.main");
-        
-        JFClass newClass = classBean.addClass("Main.java", "", 
-                packBean.getPackageByName(newProj.getId(), "com.javafiddle.main").getId(), 
+        JFPackage newPack = packBean.addPackage(newProj.getId(), "com.javafiddle.main");        
+        JFClass newClass = classBean.addClass("Main.java", "",  newPack.getId(), 
                 (new Date()).getTime());
-        return newClass.getId();
+        return newProj.getId();
     }
 }

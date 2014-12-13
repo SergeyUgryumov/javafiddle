@@ -52,14 +52,15 @@ public class FileSaver {
             FileSaver.createFile(path);
         else 
             file.delete();
-        System.out.println("FileSaver: writeToFile: managed to create new file:" + file.createNewFile());
-        System.out.println("FileSaver: writeToFile: content: "+content);
+//        System.out.println("FileSaver: writeToFile: managed to create new file:" + file.createNewFile());
+//        System.out.println("FileSaver: writeToFile: content: "+content);
         try (PrintWriter writer = new PrintWriter(file)) {
             writer.write(content);
         }
     }
     public static String getContentOfFile(String path) throws FileNotFoundException, IOException {
         File file = new File(PREFIX + path);
+        if (!file.exists()) return null;
         FileInputStream fis = new FileInputStream(file);
         byte [] data = new byte[(int)file.length()];
         fis.read(data);

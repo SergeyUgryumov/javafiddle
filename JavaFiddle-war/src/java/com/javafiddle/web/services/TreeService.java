@@ -114,6 +114,7 @@ public class TreeService {
         Long time = (new Date()).getTime();
         Long newClassId = classBean.addClass(className + ".java", "", packId, time).getId();
         
+        
         Gson gson = new GsonBuilder().create();
         return Response.ok(gson.toJson(newClassId), MediaType.APPLICATION_JSON).build();
     }

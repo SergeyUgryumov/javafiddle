@@ -87,8 +87,7 @@
                             <li class="dropdown">
                                 <a id="dropdown-history" class="dropdown-toggle" data-toggle="dropdown" href="#">Git</a>
                                 <ul class="dropdown-menu" role="menu" aria-labelledby="dropdown-history">
-                                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="gitSaveAllFiles()">Save Project</a></li>
-                                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="gitCommit()">Commit</a></li>
+                                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="gitCommit('Testing commit')">Commit</a></li>
                                     <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="">Show History</a></li>
                                 </ul>
                             </li>
@@ -105,7 +104,7 @@
                 </div>
                 <div id="header-top-right">
                      <h:panelGroup layout="block" id="username" >
-                         Logged in as <h:link value="guest" outcome="index" />
+                         Logged in as <h:link value="#{curUserBean.curUserName}" outcome="index" />
                     </h:panelGroup>
                     <!-- Log in -->
                     <div id="log_in" class="btn-group btn-group-sm">

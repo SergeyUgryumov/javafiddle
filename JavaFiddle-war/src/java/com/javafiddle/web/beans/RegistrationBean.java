@@ -5,8 +5,12 @@
  */
 package com.javafiddle.web.beans;
 
+import com.javafiddle.core.ejb.JFProjectBean;
 import com.javafiddle.core.ejb.RegistrationBeanLocal;
+import com.javafiddle.core.ejb.UserBean;
+import com.javafiddle.core.jpa.JFProject;
 import com.javafiddle.core.jpa.User;
+import com.javafiddle.web.services.sessiondata.ISessionData;
 import java.io.Serializable;
 import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
@@ -29,32 +33,49 @@ public class RegistrationBean implements Serializable{
     @Inject
     private RegistrationBeanLocal ejbRegistrationBean;
    
+    @Inject
+    private ISessionData sd;
+    
+    @EJB
+    private JFProjectBean projectBean;
+    
+    @EJB
+    private UserBean userBean;
+    
     private User user;
     private String nickname;
     private String password;
     private String email;
 
     public void addNewUser(){
-        System.out.println("Try to registrate: login: " + nickname + ", email: " + email + ", password: " + password);
+        System.out.println("Try to register: login: " + nickname + ", email: " 
+                + email + ", password: " + password);
         boolean error = false;
         FacesContext context = FacesContext.getCurrentInstance();
         if (this.nickname.isEmpty()){    
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Username field is not filled", "Some field input failed"));
+            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, 
+                    "Username field is not filled", "Some field input failed"));
             error = true;
         }
         if (this.email.isEmpty()){
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Email field is not filled", "Some field input failed"));
+            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, 
+                    "Email field is not filled", "Some field input failed"));
             error = true;
         }
         if (this.password.isEmpty()){
-            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password field is not filled", "Some field input failed"));
+            context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, 
+                    "Password field is not filled", "Some field input failed"));
             error = true;
         }
         if (!error){
             user = ejbRegistrationBean.addNewUser(this.nickname, this.password, this.email);
-            if (user == null) 
-                context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, ejbRegistrationBean.getMessage(), ejbRegistrationBean.getMessage()));
-
+            System.out.println(user.toString());
+            if (user == null) {
+                context.addMessage("registerErrors", new FacesMessage(FacesMessage.SEVERITY_ERROR, 
+                        ejbRegistrationBean.getMessage(), ejbRegistrationBean.getMessage()));
+            }
+            Long projId = projectBean.addNewDefaultProject(user.getId());
+            sd.setCurrentProjectId(projId);
         }
         //System.out.println("ADD NEW USER");
     }

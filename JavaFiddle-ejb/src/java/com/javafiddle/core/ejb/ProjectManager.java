@@ -110,7 +110,7 @@ public class ProjectManager {
         return sb.toString();
     }
     /**
-     * Returns the full path for the class mentioned in arguments.
+     * Returns the relative path for the class mentioned in arguments.
      * @param classId
      * @return 
      */

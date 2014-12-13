@@ -12,6 +12,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.RevertCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -25,35 +26,44 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 public class GitHandler {
     private String name, email;
     private Repository rep;
-    private String sep;
+    private final String sep = File.separator;
+    private final String prefix = System.getProperty("user.home") + File.separator + "javafiddle_data"
+            + File.separator;
     private Git git;
-    public GitHandler(String name, String email, String pathToFolder) {
+    public GitHandler(String name, String email, String pathToFolder) { //pathToFolder - relative
         this.name = name;
         this.email = email;
-        this.sep = System.getProperty("file.separator");
+        String fullPath = this.prefix + pathToFolder;
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
-        try {
-            this.rep = builder.setGitDir(new File(pathToFolder+sep+".git"))
+        try { 
+            this.rep = builder.setGitDir(new File(fullPath+sep+".git"))
                     .readEnvironment()
                     .findGitDir()
                     .build();
+            if (!GitHandler.repoIsInitialized(fullPath)) {
+                try{
+                    rep.create();
+                }
+                catch(Exception e) {
+                    System.out.println("Repo exists.");
+                }
+            }
             this.git = new Git(this.rep);
         } catch (IOException ex) {
             Logger.getLogger(GitHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    public void initializeRepo(String pathToFolder) throws IOException {
-        rep.create();
-    }
     /**
-     * Adds the specified file to the repo.
-     * @param pathToFile MUST BE A RELATIVE PATH!
+     * Adds the specified file or folder to the repository.
+     * @param pathToObject MUST BE A RELATIVE PATH!
      */
-    public void addFileToRepo(String pathToFile) {
+    public void addFileToRepo(String pathToObject) {
         AddCommand add = this.git.add();
-        add.addFilepattern(pathToFile);
+        System.out.println("GitHandler(62): adding file to repo: " + pathToObject);
+        add.addFilepattern("src");
+        add.addFilepattern(pathToObject);
         try {
-            add.call();
+            DirCache cache = add.call();
         } catch (GitAPIException ex) {
             Logger.getLogger(GitHandler.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -69,13 +79,13 @@ public class GitHandler {
         commit.setCommitter(this.name, this.email);
         try {
             RevCommit commitRes = commit.call();
+            System.out.println("GitHandler: commit(72): " + commitRes.getFullMessage());
+            System.out.println("GitHandler: commit(73): " + commitRes.abbreviate(10).name());
             return commitRes.abbreviate(10).name(); //So that is the hash.
         } catch (GitAPIException ex) {
-            Logger.getLogger(GitHandler.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("GitHandler: commit: 74: " + ex);
         }
-        finally {
-            return null;
-        }
+        return null;
     }
     /**
      * Map of times and SHA-1 hashes.
@@ -88,5 +98,10 @@ public class GitHandler {
             commitsMap.put(rev.getCommitTime(), rev.abbreviate(10).name());
         }
         return commitsMap;
+    }
+    public static boolean repoIsInitialized(String pathToProject) {
+        System.out.println("Repo \"" + pathToProject + File.separator + ".git" + "\" exists:" +  
+                new File(pathToProject + File.separator + ".git").exists());
+        return (new File(pathToProject + File.separator + ".git")).exists();
     }
 }
