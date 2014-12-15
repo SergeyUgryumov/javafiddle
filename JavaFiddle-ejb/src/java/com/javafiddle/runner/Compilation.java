@@ -1,17 +1,31 @@
 package com.javafiddle.runner;
 
+import com.javafiddle.core.ejb.ProjectManager;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.ejb.EJB;
+import org.apache.maven.shared.invoker.DefaultInvocationRequest;
+import org.apache.maven.shared.invoker.DefaultInvoker;
+import org.apache.maven.shared.invoker.InvocationOutputHandler;
+import org.apache.maven.shared.invoker.InvocationRequest;
+import org.apache.maven.shared.invoker.InvocationResult;
+import org.apache.maven.shared.invoker.Invoker;
+import org.apache.maven.shared.invoker.MavenInvocationException;
+import org.apache.maven.shared.invoker.PrintStreamHandler;
 /**
  * Compilation is a class responsible for handling compilation process. This 
  * includes the compilation itself, all exceptional situations and all output
@@ -24,56 +38,76 @@ import java.util.logging.Logger;
  */
 public class Compilation implements Launcher, Serializable {
 
-    private String filepath = "";
-    private String args = "";
-    private String classFilePath = null;
+    private String pathtoProject = "";
     private Process process;
     private Boolean killed = false;
     private Queue<String> stream = null;
     private Integer pid = null;
+    private int exitValue;
 
-    public Compilation(String args, String pathtofile) {
+    public Compilation(String pathtoProject) {
         this.stream = new LinkedList<>();
-        this.filepath = pathtofile;
-        this.args = args;
-    }
-
-    public Compilation(String pathtofile) {
-        this.stream = new LinkedList<>();
-        this.filepath = pathtofile;
+        this.pathtoProject = pathtoProject;
+        exitValue = -1;
     }
     
-    public Compilation(ArrayList<String> filesPath) {
-        StringBuilder result = new StringBuilder();
-        for(String filePath : filesPath) {
-            result.append(filePath).append(" ");
+    public class Execute extends Thread {
+        private Invoker invoker;
+        private InvocationRequest request;        
+                
+        public Execute(Invoker invoker, InvocationRequest request){
+            this.invoker = invoker;
+            this.request = request;            
         }
-        result.deleteCharAt(result.length() - 1);
         
-        this.stream = new LinkedList<>();
-        this.filepath = result.toString();
+        @Override
+        public void run(){
+            InvocationResult result;
+            try {
+                result = invoker.execute( request );
+                exitValue = result.getExitCode(); 
+            } catch (MavenInvocationException ex) {
+                Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);
+            }            
+        }
     }
 
     @Override
     public void run() {
         try {
-            String command = "javac " + args + " " + filepath;
-            process = Runtime.getRuntime().exec(command);
-            setPid(process);
-            printLines(" stdout:", process.getInputStream());
-            printLines(" <span style='color:red'>stderr:</span>", process.getErrorStream());
-            process.waitFor();
-            stream.add(" exitValue() " + process.exitValue());
-            stream.add("#END_OF_STREAM#");
-        } catch (IOException | InterruptedException ex) {
+            InvocationRequest request = new DefaultInvocationRequest();
+		request.setPomFile(new File(pathtoProject + File.separator + "pom.xml"));
+		//Вместо compile можно указать:
+		//	test
+		//	Тестирование с помощью JUnit тестов 
+		//	package
+		//	Создание .jar файла или war, ear в зависимости от типа проекта 
+		//	integration-test
+		//	Запуск интеграционных тестов 
+		//	install
+		//	Копирование .jar (war , ear) в локальный репозиторий 
+		//	deploy
+		//	публикация файла в удалённый репозиторий
+                             
+		request.setGoals(Arrays.asList( "clean", "compile" ));
+
+                PipedOutputStream out = new PipedOutputStream();
+                PrintStream ps = new PrintStream(out);//PrintStream(out);
+                InvocationOutputHandler oh = new PrintStreamHandler(ps, true);
+                PipedInputStream in = new PipedInputStream();
+                out.connect(in);
+                                
+		Invoker invoker = new DefaultInvoker();                
+		invoker.setMavenHome(new File("C:\\apache-maven-3.2.3"));//???
+                invoker.setOutputHandler(oh);
+                
+                Execute execute = new Execute(invoker, request); 
+                execute.start();
+                printLines(" stdout:", in);     
+                
+        } catch (IOException ex) {
                 Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        finally {
-            makeClassFilePath();
-        }
-        synchronized(stream) {
-            
-        }
+        } 
     }
 
     @Override
@@ -88,18 +122,10 @@ public class Compilation implements Launcher, Serializable {
     public void printLines(String name, InputStream ins) throws IOException {
         String line = null;
         BufferedReader in = new BufferedReader(
-                new InputStreamReader(ins));
+            new InputStreamReader(ins));            
         while ((line = in.readLine()) != null) {
             stream.add(name + " " + line);
         }
-    }
-
-    private void makeClassFilePath() {
-        classFilePath = filepath.replace('/', '.').substring(0, filepath.indexOf(".java"));
-    }
-
-    public String getClassFilePath() {
-        return classFilePath;
     }
 
     @Override
@@ -124,17 +150,13 @@ public class Compilation implements Launcher, Serializable {
 
     @Override
     public int getExitCode() {
-        return process.exitValue();
+        return exitValue;
     }
 
     @Override
     public int waitFor() {
-        try {
-            return process.waitFor();
-        } catch (InterruptedException ex) {
-            Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return 0;
+            while(exitValue == -1){};
+            return 0;
     }
 
     @Override

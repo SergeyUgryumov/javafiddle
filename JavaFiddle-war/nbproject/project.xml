@@ -20,10 +20,16 @@
                 </library>
                 <library dirs="200">
                     <file>${file.reference.org.eclipse.jgit-3.5.1.201410131835-r-javadoc.jar}</file>
-                    <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
                 <library dirs="200">
                     <file>${file.reference.org.eclipse.jgit-3.5.1.201410131835-r.jar}</file>
+                </library>
+                <library dirs="200">
+                    <file>${file.reference.org.eclipse.jgit-3.5.2.201411120430-r.jar}</file>
+                    <path-in-war>WEB-INF/lib</path-in-war>
+                </library>
+                <library dirs="200">
+                    <file>${file.reference.org.eclipse.jgit-3.5.2.201411120430-r-javadoc.jar}</file>
                     <path-in-war>WEB-INF/lib</path-in-war>
                 </library>
             </web-module-libraries>

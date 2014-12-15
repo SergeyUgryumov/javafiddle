@@ -20,7 +20,7 @@ public class Revisions {
     }
     
     public void addFileRevision(TreeFile file, IdList idList) {
-        addFileRevision(file.getId(), 0, new ClassTemplate(file, idList).getValue());
+        //addFileRevision(file.getId(), 0, new ClassTemplate(file, idList).getValue());
     }
     /**
      * 
