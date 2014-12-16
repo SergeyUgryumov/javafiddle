@@ -121,7 +121,7 @@ public class ProjectManager {
         User user = proj.getUser();
         String SEP = File.separator;
         String path = user.getNickname() + SEP + proj.getProjectName() + SEP 
-                +"src" + SEP + "main" + SEP;
+                +"src" + SEP + "main" + SEP + "java" + SEP;
         path += PackageNameUtility.getPathFromPackage(pack.getPackageName());
         path += SEP;
         path += clazz.getClassName();

@@ -2,6 +2,9 @@ package com.javafiddle.web.services;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.javafiddle.core.ejb.JFClassBean;
+import com.javafiddle.core.ejb.JFPackageBean;
+import com.javafiddle.core.ejb.JFProjectBean;
 import com.javafiddle.core.ejb.ProjectManager;
 import com.javafiddle.pool.Task;
 import com.javafiddle.pool.TaskPool;
@@ -15,13 +18,22 @@ import com.javafiddle.web.services.sessiondata.ISessionData;
 import com.javafiddle.web.tree.TreeFile;
 import com.javafiddle.web.templates.ClassTemplate;
 import com.javafiddle.maven.PomCreator;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
@@ -39,12 +51,24 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 
+
 @Path("run")
 @RequestScoped
 public class RunService {
     
     @EJB
     private ProjectManager pm;
+    
+    @EJB
+    private JFPackageBean packBean;
+    
+    @EJB
+    private JFClassBean classBean;
+    
+    @EJB
+    private JFProjectBean projBean;
+    
+    private String prefix = System.getProperty("user.home") + File.separator + "javafiddle_data" + File.separator;    
     
     
     public static File createFile(String path, String value, String pack) throws IOException {
@@ -85,7 +109,103 @@ public class RunService {
 		}
 		
 		PomCreator pc = new PomCreator(path);
+                pc.setGroupId(pack);
+                pc.setArtifactId((projBean.getProjectById(sd.getCurrentProjectId())).getProjectName());
+                pc.setName((projBean.getProjectById(sd.getCurrentProjectId())).getProjectName());
 		pc.createFile();
+    }
+    
+    public class MainClassScanner {
+        File mainConf;
+        String pathtoProject;
+        private long mainClassID;
+        private long mainClassPackID;
+        
+        public MainClassScanner(){
+        }
+        
+        public MainClassScanner(String pathtoProject) {
+            mainConf = new File(pathtoProject + File.separator + "main-id.conf");
+            this.pathtoProject = pathtoProject;            
+        }
+        
+        public void manage() {
+            String s;
+            if (mainConf.exists()) {             
+                    try {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(mainConf)));
+                        s = br.readLine();
+                        mainClassID = Long.parseLong(s);
+                        s = br.readLine();
+                        mainClassPackID = Long.parseLong(s);
+                        br.close();
+                        if (!check(prefix + pm.getPathForClass(mainClassID))) mainConf.delete();
+                    } catch (IOException ex) {
+                        Logger.getLogger(RunService.class.getName()).log(Level.SEVERE, null, ex);
+                    }              
+            } 
+            if (!mainConf.exists()) {
+                try {
+                    if (scan()) mainConf.createNewFile();
+                    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(mainConf)));
+                    s = Long.toString(mainClassID);
+                    bw.write(s);
+                    bw.flush();
+                    bw.newLine();
+                    s = Long.toString(mainClassPackID);
+                    bw.write(s);
+                    bw.flush();
+                    bw.close();
+                } catch (IOException ex) {
+                    Logger.getLogger(RunService.class.getName()).log(Level.SEVERE, null, ex);
+                }                
+            }            
+        }
+        
+        public boolean scan() throws IOException{
+            boolean found = false;
+                        
+            List<Long> packages = projBean.getPackagesOfProject(sd.getCurrentProjectId());
+            List<Long> classes;
+            Long packId;
+            Long classId;
+                    
+            Iterator<Long> packIterator = packages.iterator();
+            Iterator<Long> classIterator;
+            while ((packIterator.hasNext()) && (!found)) {
+                packId = packIterator.next();
+                classes = packBean.getClassesOfPackage(packId);
+                classIterator = classes.iterator();
+                while ((classIterator.hasNext()) && (!found)) {
+                    classId = classIterator.next();
+                    if (check(prefix + pm.getPathForClass(classId))) {
+                        found = true;
+                        mainClassID = classId;
+                        mainClassPackID = packId;
+                    }               
+                }                
+            }
+            
+            return found;
+        }
+        
+        public boolean check(String className) throws IOException {
+            boolean found = false;
+            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(className))));
+            String s;
+            while(((s = br.readLine()) != null) && (!found)) {
+                if (s.matches("^.*public\\s+static\\s+void\\s+main.*$")) found = true;
+            }
+            return found;     
+        }
+        
+        public long getMainClassID(){
+            return mainClassID;
+        }
+        
+        public long getMainClassPackID(){
+            return mainClassPackID;
+        }
     }
     
     @Inject
@@ -105,15 +225,19 @@ public class RunService {
             ) {        
         AccessController.doPrivileged(new PrivilegedAction() {
             @Override
-            public Object run() {
-                String path = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject";//pm.getPathForProject(sd.getCurrentProjectId());
-		String pack = "com.myfirsyproject.web";//getMainPackageName();
+            public Object run() {                
+                String path = prefix + pm.getPathForProject(sd.getCurrentProjectId());
+                                
+                MainClassScanner mcs = new MainClassScanner(path);
+                mcs.manage();                
+                long mainClassPackID = mcs.getMainClassPackID();
+                String mainClassPack = packBean.getPackageName(mainClassPackID);
                 
                 Compilation comp = new Compilation(path);
                 comp.addToOutput("Creating of service files");
-                createServiceFiles(path, pack);
+                createServiceFiles(path, mainClassPack);
 		comp.addToOutput("Service files created successfully");
-                comp.addToOutput("Launching of maven invocation, please wait...");
+                comp.addToOutput("Launching of maven invocation, please wait...");                
                 
                 Task task = new Task(TaskType.COMPILATION, comp);
                 TaskPool.getInstance().add(task);
@@ -139,12 +263,20 @@ public class RunService {
         AccessController.doPrivileged(new PrivilegedAction() {
             @Override
             public Object run() {
-                String path = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject";//pm.getPathForProject(sd.getCurrentProjectId());
-                String pathtoFile = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject\\main\\java\\com\\myfirstproject\\web\\Main.java";
-                pathtoFile = pathtoFile.replace(path + File.separator + "main" + File.separator + "java" + File.separator, "");
-                pathtoFile = pathtoFile.replace(".java", "");
-                pathtoFile = pathtoFile.replace(File.separator, ".");
                 
+                String path = prefix + pm.getPathForProject(sd.getCurrentProjectId());
+                String pathtoFile;
+                
+                MainClassScanner mcs = new MainClassScanner(path);
+                mcs.manage();
+                long mainClassID = mcs.getMainClassID();
+                long mainClassPackID = mcs.getMainClassPackID();
+                
+                String className = classBean.getClassName(mainClassID);
+                className = className.replace(".java", "");
+                pathtoFile = packBean.getPackageName(mainClassPackID) + "." + className;          
+                
+                                
                 Task task = new Task(TaskType.EXECUTION, new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile));
                 TaskPool.getInstance().add(task);
                 try {
@@ -176,24 +308,29 @@ public class RunService {
             @Override
             public Object run() {
                 
-                String path = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject";//pm.getPathForProject(sd.getCurrentProjectId());
-                String pathtoFile = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject\\main\\java\\com\\myfirstproject\\web\\Main.java";
-                pathtoFile = pathtoFile.replace(path + File.separator + "main" + File.separator + "java" + File.separator, "");
-                pathtoFile = pathtoFile.replace(".java", "");
-                pathtoFile = pathtoFile.replace(File.separator, ".");
-		String pack = "com.myfirsyproject.web";//getMainPackageName();
+                String path = prefix + pm.getPathForProject(sd.getCurrentProjectId());
+                                
+                MainClassScanner mcs = new MainClassScanner(path);
+                mcs.manage();                
+                long mainClassPackID = mcs.getMainClassPackID();
+                long mainClassID = mcs.getMainClassID();
+                String mainClassPack = packBean.getPackageName(mainClassPackID);
+                
+                String className = classBean.getClassName(mainClassID);
+                className = className.replace(".java", "");
+                String pathtoFile = packBean.getPackageName(mainClassPackID) + "." + className; 
                 
                 Compilation comp = new Compilation(path);
-                comp.addToOutput("Creating of service files, please wait...");
-                createServiceFiles(path, pack);
+                comp.addToOutput("Creating of service files");
+                createServiceFiles(path, mainClassPack);
 		comp.addToOutput("Service files created successfully");
+                comp.addToOutput("Launching of maven invocation, please wait...");                
                 
                 Task task1 = new Task(TaskType.COMPILATION, comp);
                 TaskPool.getInstance().add(task1);
                 
                 task1.start();
                 
-
                 try{
                     task1.join();
                 } 

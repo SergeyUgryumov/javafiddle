@@ -75,6 +75,7 @@ public class Compilation implements Launcher, Serializable {
         try {
             InvocationRequest request = new DefaultInvocationRequest();
 		request.setPomFile(new File(pathtoProject + File.separator + "pom.xml"));
+                
 		//Вместо compile можно указать:
 		//	test
 		//	Тестирование с помощью JUnit тестов 
@@ -103,6 +104,10 @@ public class Compilation implements Launcher, Serializable {
                 execute.start();
                 printLines("", in);     
                 
+                waitFor();
+                out.close();
+                in.close();
+                
         } catch (IOException ex) {
                 Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);
         } 
@@ -121,7 +126,7 @@ public class Compilation implements Launcher, Serializable {
         String line = null;
         BufferedReader in = new BufferedReader(
             new InputStreamReader(ins));            
-        while ((line = in.readLine()) != null) {
+        while (((line = in.readLine()) != null) && (exitValue == -1)) {
             stream.add(name + " " + line);
         }
     }

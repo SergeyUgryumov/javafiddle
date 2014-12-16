@@ -45,7 +45,7 @@ public class Execution implements Launcher, Serializable {
 //            // Linux Commands
 //        }
         try {
-            String command = "java " + args + " " + pathtoclass;
+            String command = "java " + args + " " + pathtoclass;            
             process = Runtime.getRuntime().exec(command);
             setPid(process);
             printLines(" stdout:", process.getInputStream());
