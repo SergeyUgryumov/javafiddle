@@ -30,10 +30,6 @@ import org.apache.maven.shared.invoker.PrintStreamHandler;
  * Compilation is a class responsible for handling compilation process. This 
  * includes the compilation itself, all exceptional situations and all output
  * of the compiler. <br/>
- * Currently javac is used for compilation. I suppose we will replace it with maven.
- * Also I'm not sure if the code is cross-platform, because there is some text 
- * requiring the program being run on a Unix-system. It is commented, but anyway 
- * it is better to be double-checked.
  * 
  */
 public class Compilation implements Launcher, Serializable {
@@ -44,6 +40,7 @@ public class Compilation implements Launcher, Serializable {
     private Queue<String> stream = null;
     private Integer pid = null;
     private int exitValue;
+    private InputStream is;
 
     public Compilation(String pathtoProject) {
         this.stream = new LinkedList<>();
@@ -57,7 +54,8 @@ public class Compilation implements Launcher, Serializable {
                 
         public Execute(Invoker invoker, InvocationRequest request){
             this.invoker = invoker;
-            this.request = request;            
+            this.request = request;
+            is = request.getInputStream(null);
         }
         
         @Override
@@ -92,7 +90,7 @@ public class Compilation implements Launcher, Serializable {
 		request.setGoals(Arrays.asList( "clean", "compile" ));
 
                 PipedOutputStream out = new PipedOutputStream();
-                PrintStream ps = new PrintStream(out);//PrintStream(out);
+                PrintStream ps = new PrintStream(out);
                 InvocationOutputHandler oh = new PrintStreamHandler(ps, true);
                 PipedInputStream in = new PipedInputStream();
                 out.connect(in);
@@ -103,7 +101,7 @@ public class Compilation implements Launcher, Serializable {
                 
                 Execute execute = new Execute(invoker, request); 
                 execute.start();
-                printLines(" stdout:", in);     
+                printLines("", in);     
                 
         } catch (IOException ex) {
                 Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);
@@ -135,12 +133,12 @@ public class Compilation implements Launcher, Serializable {
     
     @Override
     public OutputStream getInputStream() {
-        return process.getOutputStream();
+        return null;
     }
     
     @Override
     public InputStream getErrorStream() {
-        return process.getErrorStream();
+        return null;
     }
 
     @Override
@@ -164,21 +162,6 @@ public class Compilation implements Launcher, Serializable {
         return pid;
     }
     
-    private void setPid(Process process) {
- //       if (process.getClass().getName().equals("java.lang.UNIXProcess")) {
-            try {
-                Class cl = process.getClass();
-                Field field = cl.getDeclaredField("pid");
-                field.setAccessible(true);
-                Object pidObject = field.get(process);
-                pid = (Integer) pidObject;
-            } catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException ex) {
-                Logger.getLogger(Execution.class.getName()).log(Level.SEVERE, null, ex);
-            }
-   /*     } else {
-            throw new IllegalArgumentException("Needs to be a UNIXProcess");
-        }
-  */  }
 
     @Override
     public void addToOutput(String line) {

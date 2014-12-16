@@ -72,6 +72,22 @@ public class RunService {
 		return file;
 	}
     
+    public void createServiceFiles(String path, String pack) {
+        ClassTemplate ct = new ClassTemplate("AppTest", "JUnit", pack);
+		
+		try {
+			createFile(path + File.separator + "src"
+					+ File.separator + "test"
+					+ File.separator + "java"
+					+ File.separator, ct.getValue(), pack);
+		} catch (IOException ex) {
+			Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);
+		}
+		
+		PomCreator pc = new PomCreator(path);
+		pc.createFile();
+    }
+    
     @Inject
     private ISessionData sd;
     
@@ -91,24 +107,15 @@ public class RunService {
             @Override
             public Object run() {
                 String path = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject";//pm.getPathForProject(sd.getCurrentProjectId());
-                System.out.println("success");
 		String pack = "com.myfirsyproject.web";//getMainPackageName();
                 
-                ClassTemplate ct = new ClassTemplate("AppTest", "JUnit", pack);
-		
-		try {
-			createFile(path + File.separator + "src"
-					+ File.separator + "test"
-					+ File.separator + "java"
-					+ File.separator, ct.getValue(), pack);
-		} catch (IOException ex) {
-			Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);
-		}
-		
-		PomCreator pc = new PomCreator(path);
-		pc.createFile();
-		
-                Task task = new Task(TaskType.COMPILATION, new Compilation(path));
+                Compilation comp = new Compilation(path);
+                comp.addToOutput("Creating of service files");
+                createServiceFiles(path, pack);
+		comp.addToOutput("Service files created successfully");
+                comp.addToOutput("Launching of maven invocation, please wait...");
+                
+                Task task = new Task(TaskType.COMPILATION, comp);
                 TaskPool.getInstance().add(task);
                
                 task.start();           
@@ -132,23 +139,13 @@ public class RunService {
         AccessController.doPrivileged(new PrivilegedAction() {
             @Override
             public Object run() {
-                StringBuilder path = new StringBuilder();
-                String packageName = null;
-                String runnableName = null;
-//                for (TreeFile tf : sd.getIdList().getFileList().values())
-//                    if (tf.getType().equals("runnable")) {
-//                        runnableName = tf.getName();
-//                        if (tf.getName().endsWith(".java"))
-//                            runnableName = runnableName.substring(0, runnableName.length() - ".java".length());
-//                        packageName = sd.getIdList().getPackage(tf.getPackageId()).getName();
-//                        packageName = packageName.startsWith("!") ? "" : packageName + ".";
-//                        path.append(ISessionData.BUILD).append(ISessionData.SEP).append(sd.getTree().getHashes().getSrcHash()).append(ISessionData.SEP).append("src").append(ISessionData.SEP);
-//                        break;
-//                    }
-                if (runnableName == null || packageName == null)
-                    return null;
-
-                Task task = new Task(TaskType.EXECUTION, new Execution("-classpath " + path.toString(), packageName + runnableName));
+                String path = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject";//pm.getPathForProject(sd.getCurrentProjectId());
+                String pathtoFile = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject\\main\\java\\com\\myfirstproject\\web\\Main.java";
+                pathtoFile = pathtoFile.replace(path + File.separator + "main" + File.separator + "java" + File.separator, "");
+                pathtoFile = pathtoFile.replace(".java", "");
+                pathtoFile = pathtoFile.replace(File.separator, ".");
+                
+                Task task = new Task(TaskType.EXECUTION, new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile));
                 TaskPool.getInstance().add(task);
                 try {
                     task.start();
@@ -174,47 +171,28 @@ public class RunService {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response compileAndRun(
             @Context HttpServletRequest request
-            ) {
-//        ProjectRevisionSaver spr = new ProjectRevisionSaver(sd.getTree(), sd.getIdList(), sd.getFiles());
-//        sd.getTree().getHashes().setSrcHash(spr.saveSrc(sd.getTree().getHashes().getSrcHash()));
-//        if (sd.getTree().getHashes().getSrcHash() == null)
-//            return Response.status(404).build();
-        
+            ) {        
         AccessController.doPrivileged(new PrivilegedAction() {
             @Override
             public Object run() {
                 
-                ArrayList<String> paths = new ArrayList<>();
-                StringBuilder executepath = new StringBuilder();
-                String packageName = null;
-                String runnableName = null;
+                String path = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject";//pm.getPathForProject(sd.getCurrentProjectId());
+                String pathtoFile = "C:\\apache-maven-3.2.3\\Projects\\MyFirstProject\\main\\java\\com\\myfirstproject\\web\\Main.java";
+                pathtoFile = pathtoFile.replace(path + File.separator + "main" + File.separator + "java" + File.separator, "");
+                pathtoFile = pathtoFile.replace(".java", "");
+                pathtoFile = pathtoFile.replace(File.separator, ".");
+		String pack = "com.myfirsyproject.web";//getMainPackageName();
                 
-//                for (TreeFile file : sd.getIdList().getFileList().values()) {
-//                    StringBuilder path = new StringBuilder();
-//                    path.append(ISessionData.BUILD).append(ISessionData.SEP).append(sd.getTree().getHashes().getSrcHash()).append(ISessionData.SEP).append("src").append(ISessionData.SEP).append(sd.getIdList().getPackage(file.getPackageId()).getName().replace(".", ISessionData.SEP)).append(ISessionData.SEP).append(file.getName());
-//                    paths.add(path.toString());
-//                   
-//                    if (file.getType().equals("runnable")) {
-//                        runnableName = file.getName();
-//                        if (file.getName().endsWith(".java"))
-//                            runnableName = runnableName.substring(0, runnableName.length() - ".java".length());
-//                        packageName = sd.getIdList().getPackage(file.getPackageId()).getName();
-//                        executepath.append(ISessionData.BUILD).append(ISessionData.SEP).append(sd.getTree().getHashes().getSrcHash()).append(ISessionData.SEP).append("src").append(ISessionData.SEP);
-//                        break;
-//                    }
-//                }
+                Compilation comp = new Compilation(path);
+                comp.addToOutput("Creating of service files, please wait...");
+                createServiceFiles(path, pack);
+		comp.addToOutput("Service files created successfully");
                 
-                if (runnableName == null || packageName == null)
-                    return null;
-                
-                Task task1 = new Task(TaskType.COMPILATION, new Compilation(null));
+                Task task1 = new Task(TaskType.COMPILATION, comp);
                 TaskPool.getInstance().add(task1);
-                try {
-                    task1.start();
-                } finally {
-                    Killer killer = new Killer(task1);
-                    killer.start();
-                }
+                
+                task1.start();
+                
 
                 try{
                     task1.join();
@@ -222,8 +200,8 @@ public class RunService {
                 catch (InterruptedException ex) {
                     Logger.getLogger(RunService.class.getName()).log(Level.SEVERE, null, ex);
                 } finally { 
-                    if(!task1.isError()) {
-                        Task task2 = new Task(TaskType.EXECUTION, new Execution("-classpath " + executepath.toString(), packageName + "." + runnableName));
+                    if(!task1.isError()) {                        
+                        Task task2 = new Task(TaskType.EXECUTION, new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile));
                         TaskPool.getInstance().add(task2);
                         try {
                             task2.start();

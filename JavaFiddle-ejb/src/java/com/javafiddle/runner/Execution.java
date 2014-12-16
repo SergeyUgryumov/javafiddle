@@ -32,11 +32,18 @@ public class Execution implements Launcher, Serializable {
     }
 
     public Execution(String pathtoclass) {
+        this.stream = new LinkedList<>();
         this.pathtoclass = pathtoclass;
     }
 
     @Override
     public void run() {
+//        String OS = System.getProperty("os.name").toLowerCase();
+//        if (OS.indexOf("win") >= 0) {
+//            // Windows Commands
+//        } else {
+//            // Linux Commands
+//        }
         try {
             String command = "java " + args + " " + pathtoclass;
             process = Runtime.getRuntime().exec(command);
