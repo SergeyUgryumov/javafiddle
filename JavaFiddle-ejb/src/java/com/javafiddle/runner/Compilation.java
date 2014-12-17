@@ -75,7 +75,8 @@ public class Compilation implements Launcher, Serializable {
         try {
             InvocationRequest request = new DefaultInvocationRequest();
 		request.setPomFile(new File(pathtoProject + File.separator + "pom.xml"));
-                
+                File conf = new File(pathtoProject + File.separator + "main-id.conf");
+                if (conf.exists()){
 		//Вместо compile можно указать:
 		//	test
 		//	Тестирование с помощью JUnit тестов 
@@ -107,6 +108,7 @@ public class Compilation implements Launcher, Serializable {
                 waitFor();
                 out.close();
                 in.close();
+                }
                 
         } catch (IOException ex) {
                 Logger.getLogger(Compilation.class.getName()).log(Level.SEVERE, null, ex);

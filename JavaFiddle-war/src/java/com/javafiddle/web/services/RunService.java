@@ -120,17 +120,16 @@ public class RunService {
         String pathtoProject;
         private long mainClassID;
         private long mainClassPackID;
-        
-        public MainClassScanner(){
-        }
+        private boolean mainExists;
         
         public MainClassScanner(String pathtoProject) {
-            mainConf = new File(pathtoProject + File.separator + "main-id.conf");
-            this.pathtoProject = pathtoProject;            
+            mainConf = new File(pathtoProject + File.separator + "main-id.conf");            
+            this.pathtoProject = pathtoProject;  
+            mainExists = false;
         }
         
-        public void manage() {
-            String s;
+        public boolean manage() {
+            String s;            
             if (mainConf.exists()) {             
                     try {
                         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(mainConf)));
@@ -139,27 +138,34 @@ public class RunService {
                         s = br.readLine();
                         mainClassPackID = Long.parseLong(s);
                         br.close();
-                        if (!check(prefix + pm.getPathForClass(mainClassID))) mainConf.delete();
+                        if (!check(prefix + pm.getPathForClass(mainClassID))) {
+                            mainConf.delete();
+                            mainExists = false;
+                        } else mainExists = true;
                     } catch (IOException ex) {
                         Logger.getLogger(RunService.class.getName()).log(Level.SEVERE, null, ex);
                     }              
             } 
             if (!mainConf.exists()) {
                 try {
-                    if (scan()) mainConf.createNewFile();
-                    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(mainConf)));
-                    s = Long.toString(mainClassID);
-                    bw.write(s);
-                    bw.flush();
-                    bw.newLine();
-                    s = Long.toString(mainClassPackID);
-                    bw.write(s);
-                    bw.flush();
-                    bw.close();
+                    if (scan()) {
+                        mainConf.createNewFile();
+                        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(mainConf)));
+                        s = Long.toString(mainClassID);
+                        bw.write(s);
+                        bw.flush();
+                        bw.newLine();
+                        s = Long.toString(mainClassPackID);
+                        bw.write(s);
+                        bw.flush();
+                        bw.close();
+                        mainExists = true;
+                    }                    
                 } catch (IOException ex) {
                     Logger.getLogger(RunService.class.getName()).log(Level.SEVERE, null, ex);
                 }                
-            }            
+            }
+            return mainExists;
         }
         
         public boolean scan() throws IOException{
@@ -205,7 +211,7 @@ public class RunService {
         
         public long getMainClassPackID(){
             return mainClassPackID;
-        }
+        }        
     }
     
     @Inject
@@ -227,22 +233,30 @@ public class RunService {
             @Override
             public Object run() {                
                 String path = prefix + pm.getPathForProject(sd.getCurrentProjectId());
-                                
+                boolean mainExists;
+                
                 MainClassScanner mcs = new MainClassScanner(path);
-                mcs.manage();                
-                long mainClassPackID = mcs.getMainClassPackID();
-                String mainClassPack = packBean.getPackageName(mainClassPackID);
+                mainExists = mcs.manage();                
+                long mainClassPackID ;
+                String mainClassPack;
                 
                 Compilation comp = new Compilation(path);
-                comp.addToOutput("Creating of service files");
-                createServiceFiles(path, mainClassPack);
-		comp.addToOutput("Service files created successfully");
-                comp.addToOutput("Launching of maven invocation, please wait...");                
+                                
+                if (mainExists) {
+                    mainClassPackID = mcs.getMainClassPackID();
+                    mainClassPack = packBean.getPackageName(mainClassPackID);
+                    comp.addToOutput("Creating of service files");
+                    createServiceFiles(path, mainClassPack);
+                    comp.addToOutput("Service files created successfully");
+                    comp.addToOutput("Launching of maven invocation, please wait...");                
+                
+                    
+                } else comp.addToOutput("Compilation Error: main-method not found");
                 
                 Task task = new Task(TaskType.COMPILATION, comp);
-                TaskPool.getInstance().add(task);
+                    TaskPool.getInstance().add(task);
                
-                task.start();           
+                    task.start(); 
 
                 return null;
             }
@@ -263,21 +277,27 @@ public class RunService {
         AccessController.doPrivileged(new PrivilegedAction() {
             @Override
             public Object run() {
+                boolean mainExists;
                 
                 String path = prefix + pm.getPathForProject(sd.getCurrentProjectId());
-                String pathtoFile;
+                String pathtoFile = "";
+                long mainClassID;
+                long mainClassPackID;
                 
                 MainClassScanner mcs = new MainClassScanner(path);
-                mcs.manage();
-                long mainClassID = mcs.getMainClassID();
-                long mainClassPackID = mcs.getMainClassPackID();
+                mainExists = mcs.manage();
+                Execution exec = new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile, path);
+                if (mainExists) {
+                    mainClassID = mcs.getMainClassID();
+                    mainClassPackID = mcs.getMainClassPackID();
                 
-                String className = classBean.getClassName(mainClassID);
-                className = className.replace(".java", "");
-                pathtoFile = packBean.getPackageName(mainClassPackID) + "." + className;          
-                
+                    String className = classBean.getClassName(mainClassID);
+                    className = className.replace(".java", "");
+                    pathtoFile = packBean.getPackageName(mainClassPackID) + "." + className;
+                    exec = new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile, path);
+                } else exec.addToOutput("Execution Error: main-method not found");
                                 
-                Task task = new Task(TaskType.EXECUTION, new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile));
+                Task task = new Task(TaskType.EXECUTION, exec);
                 TaskPool.getInstance().add(task);
                 try {
                     task.start();
@@ -309,27 +329,35 @@ public class RunService {
             public Object run() {
                 
                 String path = prefix + pm.getPathForProject(sd.getCurrentProjectId());
+                String pathtoFile = "";
+                boolean mainExists;                
                                 
                 MainClassScanner mcs = new MainClassScanner(path);
-                mcs.manage();                
-                long mainClassPackID = mcs.getMainClassPackID();
-                long mainClassID = mcs.getMainClassID();
-                String mainClassPack = packBean.getPackageName(mainClassPackID);
-                
-                String className = classBean.getClassName(mainClassID);
-                className = className.replace(".java", "");
-                String pathtoFile = packBean.getPackageName(mainClassPackID) + "." + className; 
+                mainExists = mcs.manage();                
+                long mainClassPackID;
+                long mainClassID;
                 
                 Compilation comp = new Compilation(path);
-                comp.addToOutput("Creating of service files");
-                createServiceFiles(path, mainClassPack);
-		comp.addToOutput("Service files created successfully");
-                comp.addToOutput("Launching of maven invocation, please wait...");                
                 
-                Task task1 = new Task(TaskType.COMPILATION, comp);
-                TaskPool.getInstance().add(task1);
+                if(mainExists) {
+                    mainClassPackID = mcs.getMainClassPackID();
+                    mainClassID = mcs.getMainClassID();
+                    String mainClassPack = packBean.getPackageName(mainClassPackID);
                 
-                task1.start();
+                    String className = classBean.getClassName(mainClassID);
+                    className = className.replace(".java", "");
+                    pathtoFile = packBean.getPackageName(mainClassPackID) + "." + className;                 
+                
+                    comp.addToOutput("Creating of service files");
+                    createServiceFiles(path, mainClassPack);
+                    comp.addToOutput("Service files created successfully");
+                    comp.addToOutput("Launching of maven invocation, please wait...");
+                } else comp.addToOutput("Compilation Error: main-method not found");
+                
+                    Task task1 = new Task(TaskType.COMPILATION, comp);
+                    TaskPool.getInstance().add(task1);
+                
+                    task1.start();
                 
                 try{
                     task1.join();
@@ -337,8 +365,8 @@ public class RunService {
                 catch (InterruptedException ex) {
                     Logger.getLogger(RunService.class.getName()).log(Level.SEVERE, null, ex);
                 } finally { 
-                    if(!task1.isError()) {                        
-                        Task task2 = new Task(TaskType.EXECUTION, new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile));
+                    if((!task1.isError()) && mainExists){                        
+                        Task task2 = new Task(TaskType.EXECUTION, new Execution("-cp " + path + File.separator + "target" + File.separator + "classes", pathtoFile, path));
                         TaskPool.getInstance().add(task2);
                         try {
                             task2.start();
@@ -347,7 +375,7 @@ public class RunService {
                             killer.start();
                         }
                     }
-                }
+                }                
                 return null;
             }
         }, LaunchPermissions.getSecureContext());   

@@ -1,6 +1,7 @@
 package com.javafiddle.runner;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -20,15 +21,17 @@ public class Execution implements Launcher, Serializable {
 
     private String args = "";
     private String pathtoclass = "";
+    private String pathtoProject = "";
     private Process process;
     private Boolean killed = false;
     private Queue<String> stream = null;
     private Integer pid = null;
 
-    public Execution(String args, String pathtoclass) {
+    public Execution(String args, String pathtoclass, String pathtoProject) {
         this.stream = new LinkedList<>();
         this.args = args;
         this.pathtoclass = pathtoclass;
+        this.pathtoProject = pathtoProject;
     }
 
     public Execution(String pathtoclass) {
@@ -45,6 +48,8 @@ public class Execution implements Launcher, Serializable {
 //            // Linux Commands
 //        }
         try {
+            File conf = new File(pathtoProject + File.separator + "main-id.conf");
+            if (conf.exists()){
             String command = "java " + args + " " + pathtoclass;            
             process = Runtime.getRuntime().exec(command);
             setPid(process);
@@ -53,6 +58,7 @@ public class Execution implements Launcher, Serializable {
             process.waitFor();
             stream.add(" exitValue() " + process.exitValue());
             stream.add("#END_OF_STREAM#");
+            }
         } catch (IOException | InterruptedException ex) {
             Logger.getLogger(Execution.class.getName()).log(Level.SEVERE, null, ex);
         }
